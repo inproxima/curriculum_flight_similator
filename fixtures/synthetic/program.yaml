@@ -1,0 +1,430 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SYNTHETIC FIXTURE — NOT University of Calgary data.
+# Invented program used to exercise the application before real sources are imported.
+# Course codes use the fictional "SYN" prefix so they can never be mistaken for real courses.
+# ─────────────────────────────────────────────────────────────────────────────
+synthetic: true
+program:
+  code: SYN-BMS
+  name: Synthetic Biomedical Sciences (fixture)
+  institution: Synthetic University (fixture — not a real institution)
+  parent_degree: Bachelor of Synthetic Health Sciences (fixture)
+  description: >
+    A fictional four-year program used for development and testing. Structure loosely resembles a
+    biomedical sciences major so that graph, evidence, and scenario features can be exercised.
+
+pathways:
+  - {code: GEN, name: General pathway}
+  - {code: RES, name: Research-intensive (honours) pathway}
+
+versions:
+  - label: "2024–25 (synthetic)"
+    academic_year: "2024-25"
+    cohort: "Students entering Fall 2024"
+    status: published
+    document: outline_2024
+  - label: "2025–26 (synthetic draft)"
+    academic_year: "2025-26"
+    cohort: "Students entering Fall 2025"
+    status: draft
+    document: outline_2024
+    # differences from the previous version
+    overrides:
+      SYN 340: {year: 4, term: fall}
+    remove: [SYN 350]
+
+program_outcomes:
+  - {key: PLO1, label: Foundational biomedical knowledge, statement: "Explain the cellular, molecular, and physiological foundations of human health and disease."}
+  - {key: PLO2, label: Quantitative reasoning, statement: "Apply quantitative and statistical reasoning to biomedical data."}
+  - {key: PLO3, label: Experimental design, statement: "Design and conduct experiments using appropriate laboratory and analytical methods."}
+  - {key: PLO4, label: Scientific communication, statement: "Communicate scientific findings clearly to specialist and general audiences."}
+  - {key: PLO5, label: Critical appraisal, statement: "Critically appraise primary biomedical literature."}
+  - {key: PLO6, label: Ethics and professionalism, statement: "Identify and reason about ethical issues in biomedical research."}
+  - {key: PLO7, label: Collaboration, statement: "Collaborate effectively in multidisciplinary scientific teams."}
+  - {key: PLO8, label: Independent inquiry, statement: "Conduct an independent, supervised research inquiry."}
+
+topics:
+  - {key: cell-biology, title: Cell biology, area: Foundations, level: introductory}
+  - {key: chemistry-foundations, title: Chemistry for life sciences, area: Foundations, level: introductory}
+  - {key: physiology, title: Human physiology, area: Foundations, level: introductory}
+  - {key: molecular-genetics, title: Molecular genetics, area: Molecular, level: intermediate}
+  - {key: biochemistry, title: Metabolic biochemistry, area: Molecular, level: intermediate}
+  - {key: immunology, title: Immunology, area: Systems, level: intermediate}
+  - {key: pharmacology, title: Pharmacology, area: Systems, level: advanced}
+  - {key: stats-intro, title: Descriptive and inferential statistics, area: Quantitative, level: introductory}
+  - {key: stats-regression, title: Regression modelling, area: Quantitative, level: intermediate}
+  - {key: bioinformatics, title: Bioinformatics, area: Quantitative, level: advanced}
+  - {key: experimental-design, title: Experimental design, area: Research, level: intermediate}
+  - {key: lab-techniques, title: Laboratory techniques, area: Research, level: intermediate}
+  - {key: scientific-writing, title: Scientific writing, area: Communication, level: introductory}
+  - {key: literature-appraisal, title: Literature appraisal, area: Communication, level: intermediate}
+  - {key: research-ethics, title: Research ethics, area: Professionalism, level: intermediate}
+  - {key: teamwork, title: Team science, area: Professionalism, level: intermediate}
+
+courses:
+  - code: SYN 101
+    title: Foundations of Cell Biology
+    credits: 3
+    year: 1
+    term: fall
+    class: required
+    description: Structure and function of eukaryotic cells, membranes, organelles, and the cell cycle.
+    topics: [cell-biology]
+    outcomes:
+      - {key: SYN101-CO1, statement: "Describe the structure and function of major cellular organelles.", contributes: [[PLO1, introduce]]}
+    assessments:
+      - {key: SYN101-A1, title: Midterm examination, format: exam, weight: 35, week: 7, assesses: [SYN101-CO1]}
+      - {key: SYN101-A2, title: Final examination, format: exam, weight: 45, week: 14, assesses: [SYN101-CO1]}
+
+  - code: SYN 102
+    title: Chemistry for Life Sciences
+    credits: 3
+    year: 1
+    term: fall
+    class: required
+    description: Chemical bonding, thermodynamics, and reaction kinetics applied to biological systems.
+    topics: [chemistry-foundations]
+    outcomes:
+      - {key: SYN102-CO1, statement: "Apply principles of chemical equilibrium to biological reactions.", contributes: [[PLO1, introduce]]}
+    assessments:
+      - {key: SYN102-A1, title: Problem sets, format: assignment, weight: 30, week: null, assesses: [SYN102-CO1]}
+
+  - code: SYN 110
+    title: Introductory Statistics for Health Sciences
+    credits: 3
+    year: 1
+    term: winter
+    class: required
+    description: Descriptive statistics, probability, hypothesis testing, and confidence intervals with health examples.
+    topics: [stats-intro]
+    outcomes:
+      - {key: SYN110-CO1, statement: "Select and interpret basic inferential statistical tests.", contributes: [[PLO2, introduce]]}
+    assessments:
+      - {key: SYN110-A1, title: Statistics quizzes, format: quiz, weight: 20, week: 5, assesses: [SYN110-CO1]}
+      - {key: SYN110-A2, title: Final examination, format: exam, weight: 50, week: 14, assesses: [SYN110-CO1]}
+
+  - code: SYN 120
+    title: Scientific Communication I
+    credits: 3
+    year: 1
+    term: winter
+    class: required
+    description: Introduction to scientific writing, referencing, and oral presentation.
+    topics: [scientific-writing]
+    outcomes:
+      - {key: SYN120-CO1, statement: "Write a structured scientific summary using discipline conventions.", contributes: [[PLO4, introduce]]}
+    assessments:
+      - {key: SYN120-A1, title: Research summary, format: written assignment, weight: 40, week: 9, assesses: [SYN120-CO1]}
+
+  - code: SYN 130
+    title: Introduction to Human Physiology
+    credits: 3
+    year: 1
+    term: winter
+    class: required
+    prerequisite: "SYN 101"
+    description: Organ-system physiology with emphasis on homeostasis.
+    topics: [physiology]
+    outcomes:
+      - {key: SYN130-CO1, statement: "Explain homeostatic regulation across organ systems.", contributes: [[PLO1, reinforce]]}
+
+  - code: SYN 201
+    title: Molecular Genetics
+    credits: 3
+    year: 2
+    term: fall
+    class: required
+    prerequisite: "SYN 101 and SYN 102"
+    description: Gene structure, expression, regulation, and inheritance.
+    topics: [molecular-genetics]
+    outcomes:
+      - {key: SYN201-CO1, statement: "Explain mechanisms of gene expression and regulation.", contributes: [[PLO1, reinforce]]}
+    assessments:
+      - {key: SYN201-A1, title: Final examination, format: exam, weight: 50, week: 14, assesses: [SYN201-CO1]}
+
+  - code: SYN 202
+    title: Metabolic Biochemistry
+    credits: 3
+    year: 2
+    term: fall
+    class: required
+    prerequisite: "SYN 102"
+    description: Metabolic pathways, enzymes, and bioenergetics.
+    topics: [biochemistry]
+    outcomes:
+      - {key: SYN202-CO1, statement: "Describe regulation of core metabolic pathways.", contributes: [[PLO1, reinforce]]}
+
+  - code: SYN 210
+    title: Research Methods and Experimental Design
+    credits: 3
+    year: 2
+    term: fall
+    class: required
+    prerequisite: "SYN 110"
+    description: Principles of experimental design, controls, sampling, and analysis planning.
+    topics: [experimental-design]
+    outcomes:
+      - {key: SYN210-CO1, statement: "Design a controlled experiment addressing a biomedical question.", contributes: [[PLO3, introduce]]}
+      - {key: SYN210-CO2, statement: "Apply regression models to experimental data.", contributes: [[PLO2, reinforce]]}
+    assessments:
+      - {key: SYN210-A1, title: Experimental design proposal, format: written assignment, weight: 40, week: 8, assesses: [SYN210-CO1]}
+      - {key: SYN210-A2, title: Regression analysis report, format: written assignment, weight: 30, week: 11, assesses: [SYN210-CO2]}
+
+  - code: SYN 211
+    title: Applied Biostatistics
+    credits: 3
+    year: 2
+    term: winter
+    class: elective
+    prerequisite: "SYN 110"
+    description: Linear and logistic regression, study power, and analysis of health data.
+    topics: [stats-regression]
+    outcomes:
+      - {key: SYN211-CO1, statement: "Fit and interpret regression models for health data.", contributes: [[PLO2, reinforce]]}
+
+  - code: SYN 212
+    title: Data Analysis with R
+    credits: 3
+    year: 2
+    term: winter
+    class: elective
+    prerequisite: "SYN 110"
+    description: Data wrangling, visualization, and regression in the R environment.
+    topics: [stats-regression]
+    outcomes:
+      - {key: SYN212-CO1, statement: "Use R to fit regression models and visualize results.", contributes: [[PLO2, reinforce]]}
+
+  - code: SYN 220
+    title: Immunology
+    credits: 3
+    year: 2
+    term: winter
+    class: required
+    prerequisite: "SYN 201 or SYN 202"
+    description: Innate and adaptive immunity and immune dysfunction.
+    topics: [immunology]
+    outcomes:
+      - {key: SYN220-CO1, statement: "Explain innate and adaptive immune responses.", contributes: [[PLO1, reinforce]]}
+
+  - code: SYN 230
+    title: Laboratory Techniques
+    credits: 3
+    year: 2
+    term: winter
+    class: required
+    prerequisite: "SYN 210"
+    corequisite: "SYN 231"
+    description: Core wet-laboratory techniques, safety, and data recording.
+    topics: [lab-techniques]
+    outcomes:
+      - {key: SYN230-CO1, statement: "Perform core laboratory techniques safely and reproducibly.", contributes: [[PLO3, reinforce]]}
+
+  - code: SYN 231
+    title: Laboratory Practicum
+    credits: 1
+    year: 2
+    term: winter
+    class: required
+    corequisite: "SYN 230"
+    description: Supervised practicum accompanying Laboratory Techniques.
+    topics: [lab-techniques]
+    outcomes:
+      - {key: SYN231-CO1, statement: "Record and report laboratory data accurately.", contributes: [[PLO3, reinforce]]}
+
+  - code: SYN 301
+    title: Pharmacology
+    credits: 3
+    year: 3
+    term: fall
+    class: required
+    prerequisite: "SYN 202 and SYN 130"
+    description: Pharmacokinetics, pharmacodynamics, and drug classes.
+    topics: [pharmacology]
+    outcomes:
+      - {key: SYN301-CO1, statement: "Relate drug mechanisms to physiological targets.", contributes: [[PLO1, assess]]}
+
+  - code: SYN 310
+    title: Critical Appraisal of Biomedical Literature
+    credits: 3
+    year: 3
+    term: fall
+    class: required
+    prerequisite: "SYN 120"
+    description: Reading, evaluating, and synthesizing primary research articles.
+    topics: [literature-appraisal, scientific-writing]
+    outcomes:
+      - {key: SYN310-CO1, statement: "Evaluate the validity of a primary research article.", contributes: [[PLO5, introduce]]}
+      - {key: SYN310-CO2, statement: "Write a structured critical review.", contributes: [[PLO4, reinforce]]}
+    assessments:
+      - {key: SYN310-A1, title: Critical review paper, format: written assignment, weight: 40, week: 10, assesses: [SYN310-CO1, SYN310-CO2]}
+
+  - code: SYN 311
+    title: Bioinformatics
+    credits: 3
+    year: 3
+    term: fall
+    class: elective
+    prerequisite: "SYN 201 and (SYN 211 or SYN 212)"
+    description: Sequence analysis, databases, and reproducible computational workflows.
+    topics: [bioinformatics]
+    outcomes:
+      - {key: SYN311-CO1, statement: "Analyse biological sequence data using computational tools.", contributes: [[PLO2, assess]]}
+
+  - code: SYN 320
+    title: Research Ethics and Professionalism
+    credits: 3
+    year: 3
+    term: winter
+    class: required
+    description: Research ethics, integrity, consent, and professional conduct.
+    topics: [research-ethics]
+    outcomes:
+      - {key: SYN320-CO1, statement: "Analyse ethical issues in biomedical research scenarios.", contributes: [[PLO6, introduce]]}
+
+  - code: SYN 330
+    title: Advanced Experimental Design
+    credits: 3
+    year: 3
+    term: winter
+    class: required
+    prerequisite: "SYN 210 and one of SYN 211 or SYN 212"
+    description: Factorial designs, power analysis, and pre-registration.
+    topics: [experimental-design, stats-regression]
+    outcomes:
+      - {key: SYN330-CO1, statement: "Design a powered, pre-registered experiment.", contributes: [[PLO3, assess], [PLO2, assess]]}
+    assessments:
+      - {key: SYN330-A1, title: Pre-registration protocol, format: written assignment, weight: 50, week: 12, assesses: [SYN330-CO1]}
+
+  - code: SYN 340
+    title: Team Science Project
+    credits: 3
+    year: 3
+    term: winter
+    class: required
+    description: Multidisciplinary team project addressing a health-science problem.
+    topics: [teamwork]
+    outcomes:
+      - {key: SYN340-CO1, statement: "Contribute effectively to a multidisciplinary project team.", contributes: [[PLO7, introduce]]}
+    assessments:
+      - {key: SYN340-A1, title: Team project report, format: group project, weight: 60, week: 13, assesses: [SYN340-CO1]}
+
+  - code: SYN 350
+    title: Special Topics in Biomedical Sciences
+    credits: 3
+    year: 3
+    term: unknown
+    class: elective
+    prerequisite: "Consent of the program director"
+    description: Variable content. Offered subject to availability.
+    topics: []
+    outcomes: []
+
+  - code: SYN 401
+    title: Honours Research Project I
+    credits: 3
+    year: 4
+    term: fall
+    class: pathway_required
+    pathway: RES
+    prerequisite: "SYN 330 and SYN 310"
+    description: Supervised independent research project, part one.
+    topics: [experimental-design]
+    outcomes:
+      - {key: SYN401-CO1, statement: "Execute a supervised research plan.", contributes: [[PLO8, reinforce], [PLO3, assess]]}
+
+  - code: SYN 402
+    title: Honours Research Project II
+    credits: 3
+    year: 4
+    term: winter
+    class: pathway_required
+    pathway: RES
+    prerequisite: "SYN 401"
+    description: Supervised independent research project, part two, including a thesis.
+    topics: []
+    outcomes:
+      - {key: SYN402-CO1, statement: "Report an independent research inquiry in thesis form.", contributes: [[PLO8, assess], [PLO4, assess]]}
+    assessments:
+      - {key: SYN402-A1, title: Honours thesis, format: thesis, weight: 70, week: 14, assesses: [SYN402-CO1]}
+
+  - code: SYN 407
+    title: Integrative Biomedical Seminar
+    credits: 3
+    year: 4
+    term: fall
+    class: required
+    prerequisite: "SYN 310 and SYN 301"
+    description: Student-led seminars integrating molecular, physiological, and pharmacological perspectives on a current biomedical problem.
+    topics: [literature-appraisal, pharmacology]
+    outcomes:
+      - {key: SYN407-CO1, statement: "Synthesize evidence across biomedical subdisciplines to explain a current problem.", contributes: [[PLO1, assess], [PLO5, assess]]}
+      - {key: SYN407-CO2, statement: "Present an integrative seminar to a scientific audience.", contributes: [[PLO4, assess]]}
+    assessments:
+      - {key: SYN407-A1, title: Seminar presentation, format: oral presentation, weight: 40, week: 6, assesses: [SYN407-CO2]}
+      - {key: SYN407-A2, title: Literature synthesis paper, format: written assignment, weight: 40, week: 12, assesses: [SYN407-CO1]}
+
+  - code: SYN 410
+    title: Advanced Topics in Immunopharmacology
+    credits: 3
+    year: 4
+    term: winter
+    class: elective
+    prerequisite: "SYN 220 and SYN 301"
+    description: Immunomodulatory therapies and their mechanisms.
+    topics: [immunology, pharmacology]
+    outcomes:
+      - {key: SYN410-CO1, statement: "Evaluate immunomodulatory therapeutic strategies.", contributes: [[PLO1, assess]]}
+
+  - code: SYN 420
+    title: Capstone Communication Portfolio
+    credits: 3
+    year: 4
+    term: winter
+    class: required
+    description: Portfolio of scientific communication for varied audiences, including an introduction to scientific writing conventions for lay audiences.
+    topics: [scientific-writing]
+    outcomes:
+      - {key: SYN420-CO1, statement: "Communicate research to specialist and lay audiences.", contributes: [[PLO4, assess]]}
+    assessments:
+      - {key: SYN420-A1, title: Communication portfolio, format: portfolio, weight: 100, week: 14, assesses: [SYN420-CO1]}
+
+elective_groups:
+  - code: QUANT-ELECTIVE
+    name: Quantitative elective (one of)
+    min_courses: 1
+    members: [SYN 211, SYN 212]
+  - code: UPPER-ELECTIVE
+    name: Upper-year electives
+    min_courses: 1
+    members: [SYN 311, SYN 350, SYN 410]
+
+# Topic-level preparation (documented = appears in the outline text; otherwise interpretation).
+topic_preparation:
+  - {from: stats-regression, to: SYN210-CO2, basis: interpretation, review: accepted,
+     rationale: "Regression modelling is needed to meet this outcome; the outline covers regression in SYN 211/212, which run in the following term."}
+  - {from: stats-intro, to: stats-regression, basis: interpretation, review: accepted,
+     rationale: "Regression builds on inferential statistics."}
+  - {from: literature-appraisal, to: SYN407-CO1, basis: explicit_statement, review: accepted,
+     evidence: "Seminar preparation assumes students can appraise primary literature"}
+  - {from: research-ethics, to: SYN401-CO1, basis: interpretation, review: proposed,
+     rationale: "Independent projects involve ethics approval; no document states this dependency."}
+
+# Pedagogical preparation between courses (not formal requisites).
+inferred_preparation:
+  - {from: SYN 120, to: SYN 310, review: accepted, rationale: "Scientific writing skills are used in the critical review paper."}
+  - {from: SYN 110, to: SYN 330, review: accepted, rationale: "Power analysis requires inferential statistics."}
+  - {from: SYN 340, to: SYN 401, review: proposed, rationale: "Team project experience may prepare students for supervised research."}
+  - {from: SYN 220, to: SYN 407, review: proposed, rationale: "Seminar topics frequently draw on immunology."}
+
+overlaps:
+  - {a: SYN 211, b: SYN 212, rationale: "Both cover regression modelling."}
+  - {a: SYN 120, b: SYN 420, rationale: "Both describe introductory scientific-writing conventions."}
+
+# A second synthetic source with a statement that conflicts with the outline.
+review_report:
+  title: Synthetic Curriculum Review Report (fixture, 2019)
+  publication_date: "2019-01-15"
+  conflict:
+    course: SYN 330
+    statement: "SYN 330 requires SYN 211 (Applied Biostatistics)."
+    outline_rule: "SYN 210 and one of SYN 211 or SYN 212"

@@ -1,0 +1,13 @@
+data/
+.env
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+dist/
+.pytest_cache/
+.ruff_cache/
+apps/web/test-results/
+apps/web/playwright-report/
+.pnpm-store/
+*.tsbuildinfo
