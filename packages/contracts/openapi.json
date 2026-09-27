@@ -1,6 +1,53 @@
 {
  "components": {
   "schemas": {
+   "AlignmentRequest": {
+    "properties": {
+     "course_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Course Ids"
+     },
+     "kinds": {
+      "anyOf": [
+       {
+        "items": {
+         "enum": [
+          "clo_plo",
+          "assessment_clo",
+          "topic_clo",
+          "clo_clo"
+         ],
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kinds"
+     },
+     "max_calls": {
+      "default": 40,
+      "maximum": 200.0,
+      "minimum": 1.0,
+      "title": "Max Calls",
+      "type": "integer"
+     }
+    },
+    "title": "AlignmentRequest",
+    "type": "object"
+   },
    "Body_upload_document_api_v1_documents_post": {
     "properties": {
      "academic_year": {
@@ -152,6 +199,34 @@
     "title": "BulkDecision",
     "type": "object"
    },
+   "BulkDecisionIn": {
+    "properties": {
+     "decision": {
+      "enum": [
+       "accept",
+       "reject"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "keys": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 500,
+      "minItems": 1,
+      "title": "Keys",
+      "type": "array"
+     }
+    },
+    "required": [
+     "keys",
+     "decision"
+    ],
+    "title": "BulkDecisionIn",
+    "type": "object"
+   },
    "ConversationIn": {
     "properties": {
      "curriculum_version_id": {
@@ -187,6 +262,85 @@
      "curriculum_version_id"
     ],
     "title": "ConversationIn",
+    "type": "object"
+   },
+   "CoursePair": {
+    "properties": {
+     "course_edge_keys": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Course Edge Keys",
+      "type": "array"
+     },
+     "edge_keys": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Edge Keys",
+      "type": "array"
+     },
+     "label": {
+      "anyOf": [
+       {
+        "enum": [
+         "strong",
+         "moderate",
+         "weak",
+         "missing"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "source_course": {
+      "title": "Source Course",
+      "type": "string"
+     },
+     "source_key": {
+      "title": "Source Key",
+      "type": "string"
+     },
+     "strength": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strength"
+     },
+     "target_course": {
+      "title": "Target Course",
+      "type": "string"
+     },
+     "target_key": {
+      "title": "Target Key",
+      "type": "string"
+     },
+     "via": {
+      "title": "Via",
+      "type": "string"
+     }
+    },
+    "required": [
+     "source_course",
+     "target_course",
+     "source_key",
+     "target_key",
+     "via",
+     "course_edge_keys",
+     "edge_keys",
+     "strength",
+     "label"
+    ],
+    "title": "CoursePair",
     "type": "object"
    },
    "DocumentOut": {
@@ -454,6 +608,121 @@
     "title": "DocumentVersionPatch",
     "type": "object"
    },
+   "EdgeBundle": {
+    "properties": {
+     "count": {
+      "title": "Count",
+      "type": "integer"
+     },
+     "keys": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Keys",
+      "type": "array"
+     },
+     "max": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max"
+     },
+     "min": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Min"
+     }
+    },
+    "required": [
+     "count",
+     "keys",
+     "min",
+     "max"
+    ],
+    "title": "EdgeBundle",
+    "type": "object"
+   },
+   "EdgeStrength": {
+    "properties": {
+     "asserted": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Asserted"
+     },
+     "asserted_source": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Asserted Source"
+     },
+     "components": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/StrengthComponents"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "effective": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Effective"
+     },
+     "label": {
+      "anyOf": [
+       {
+        "enum": [
+         "strong",
+         "moderate",
+         "weak",
+         "missing"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     }
+    },
+    "required": [
+     "effective",
+     "label"
+    ],
+    "title": "EdgeStrength",
+    "type": "object"
+   },
    "FetchIn": {
     "properties": {
      "academic_year": {
@@ -498,6 +767,64 @@
      "url"
     ],
     "title": "FetchIn",
+    "type": "object"
+   },
+   "Gap": {
+    "properties": {
+     "entity_ids": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Entity Ids",
+      "type": "array"
+     },
+     "id": {
+      "title": "Id",
+      "type": "string"
+     },
+     "kind": {
+      "title": "Kind",
+      "type": "string"
+     },
+     "message": {
+      "title": "Message",
+      "type": "string"
+     },
+     "severity": {
+      "title": "Severity",
+      "type": "string"
+     },
+     "source": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Source"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target"
+     }
+    },
+    "required": [
+     "id",
+     "kind",
+     "severity",
+     "message",
+     "entity_ids"
+    ],
+    "title": "Gap",
     "type": "object"
    },
    "HTTPValidationError": {
@@ -661,6 +988,124 @@
     "title": "JobOut",
     "type": "object"
    },
+   "LinkDecisionIn": {
+    "properties": {
+     "decision": {
+      "enum": [
+       "accept",
+       "reject",
+       "edit"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "level": {
+      "anyOf": [
+       {
+        "enum": [
+         "introduce",
+         "reinforce",
+         "assess",
+         ""
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Level"
+     },
+     "rationale": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rationale"
+     },
+     "strength": {
+      "anyOf": [
+       {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strength"
+     }
+    },
+    "required": [
+     "decision"
+    ],
+    "title": "LinkDecisionIn",
+    "type": "object"
+   },
+   "LinkDecisionOut": {
+    "properties": {
+     "key": {
+      "title": "Key",
+      "type": "string"
+     },
+     "level": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Level"
+     },
+     "review_state": {
+      "title": "Review State",
+      "type": "string"
+     },
+     "revision_id": {
+      "title": "Revision Id",
+      "type": "string"
+     },
+     "strength": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strength"
+     },
+     "strength_source": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strength Source"
+     }
+    },
+    "required": [
+     "key",
+     "revision_id",
+     "review_state",
+     "strength",
+     "strength_source",
+     "level"
+    ],
+    "title": "LinkDecisionOut",
+    "type": "object"
+   },
    "MessageIn": {
     "properties": {
      "mode": {
@@ -797,6 +1242,98 @@
      "name"
     ],
     "title": "PathwayOut",
+    "type": "object"
+   },
+   "PloThread": {
+    "properties": {
+     "firsts": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "title": "Firsts",
+      "type": "object"
+     },
+     "label": {
+      "anyOf": [
+       {
+        "enum": [
+         "strong",
+         "moderate",
+         "weak",
+         "missing"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "missing": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Missing",
+      "type": "array"
+     },
+     "plo_id": {
+      "title": "Plo Id",
+      "type": "string"
+     },
+     "plo_key": {
+      "title": "Plo Key",
+      "type": "string"
+     },
+     "stages": {
+      "items": {
+       "$ref": "#/components/schemas/ThreadStage"
+      },
+      "title": "Stages",
+      "type": "array"
+     },
+     "status": {
+      "enum": [
+       "complete",
+       "out_of_order",
+       "never_assessed",
+       "incomplete",
+       "uncovered",
+       "levels_unstated"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "strength": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strength"
+     }
+    },
+    "required": [
+     "plo_id",
+     "plo_key",
+     "status",
+     "missing",
+     "strength",
+     "label",
+     "firsts",
+     "stages"
+    ],
+    "title": "PloThread",
     "type": "object"
    },
    "ProgramIn": {
@@ -1398,6 +1935,92 @@
     "title": "ScenarioPatch",
     "type": "object"
    },
+   "Scorecard": {
+    "properties": {
+     "avg_alignment_strength": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Avg Alignment Strength"
+     },
+     "broken_chains": {
+      "title": "Broken Chains",
+      "type": "integer"
+     },
+     "gaps": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "title": "Gaps",
+      "type": "object"
+     },
+     "links": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "title": "Links",
+      "type": "object"
+     },
+     "orphans": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "title": "Orphans",
+      "type": "object"
+     },
+     "plo_assessed_coverage": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Plo Assessed Coverage"
+     },
+     "plo_documented_coverage": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Plo Documented Coverage"
+     },
+     "threads_complete": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "title": "Threads Complete",
+      "type": "object"
+     },
+     "weak_chains": {
+      "title": "Weak Chains",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "plo_documented_coverage",
+     "plo_assessed_coverage",
+     "threads_complete",
+     "avg_alignment_strength",
+     "links",
+     "gaps",
+     "broken_chains",
+     "weak_chains",
+     "orphans"
+    ],
+    "title": "Scorecard",
+    "type": "object"
+   },
    "SourceAssign": {
     "properties": {
      "applicability": {
@@ -1618,6 +2241,174 @@
     "title": "SpanOut",
     "type": "object"
    },
+   "StrengthComponents": {
+    "properties": {
+     "intensity": {
+      "title": "Intensity",
+      "type": "number"
+     },
+     "support": {
+      "title": "Support",
+      "type": "number"
+     },
+     "trust": {
+      "title": "Trust",
+      "type": "number"
+     }
+    },
+    "required": [
+     "trust",
+     "intensity",
+     "support"
+    ],
+    "title": "StrengthComponents",
+    "type": "object"
+   },
+   "ThreadStage": {
+    "properties": {
+     "assessed": {
+      "title": "Assessed",
+      "type": "boolean"
+     },
+     "assessment_ids": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Assessment Ids",
+      "type": "array"
+     },
+     "clo_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clo Id"
+     },
+     "clo_key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clo Key"
+     },
+     "course_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Course Id"
+     },
+     "course_key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Course Key"
+     },
+     "effective": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Effective"
+     },
+     "label": {
+      "anyOf": [
+       {
+        "enum": [
+         "strong",
+         "moderate",
+         "weak",
+         "missing"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "level": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Level"
+     },
+     "provenance": {
+      "title": "Provenance",
+      "type": "string"
+     },
+     "relationship_key": {
+      "title": "Relationship Key",
+      "type": "string"
+     },
+     "term": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Term"
+     },
+     "year": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Year"
+     }
+    },
+    "required": [
+     "course_id",
+     "course_key",
+     "year",
+     "term",
+     "clo_id",
+     "clo_key",
+     "relationship_key",
+     "level",
+     "effective",
+     "label",
+     "provenance",
+     "assessed",
+     "assessment_ids"
+    ],
+    "title": "ThreadStage",
+    "type": "object"
+   },
    "UploadResult": {
     "properties": {
      "document_version": {
@@ -1830,6 +2621,626 @@
      "notes"
     ],
     "title": "VersionOut",
+    "type": "object"
+   },
+   "WebColumn": {
+    "properties": {
+     "band": {
+      "title": "Band",
+      "type": "string"
+     },
+     "course_id": {
+      "title": "Course Id",
+      "type": "string"
+     },
+     "key": {
+      "title": "Key",
+      "type": "string"
+     },
+     "term": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Term"
+     },
+     "time_index": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Time Index"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "year": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Year"
+     }
+    },
+    "required": [
+     "course_id",
+     "key",
+     "title",
+     "year",
+     "term",
+     "time_index",
+     "band"
+    ],
+    "title": "WebColumn",
+    "type": "object"
+   },
+   "WebEdge": {
+    "properties": {
+     "basis": {
+      "title": "Basis",
+      "type": "string"
+     },
+     "bundle": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/EdgeBundle"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "category": {
+      "enum": [
+       "vertical",
+       "horizontal",
+       "containment",
+       "overlap"
+      ],
+      "title": "Category",
+      "type": "string"
+     },
+     "contradicted": {
+      "default": false,
+      "title": "Contradicted",
+      "type": "boolean"
+     },
+     "has_evidence": {
+      "default": false,
+      "title": "Has Evidence",
+      "type": "boolean"
+     },
+     "id": {
+      "title": "Id",
+      "type": "string"
+     },
+     "key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Key"
+     },
+     "level": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Level"
+     },
+     "origin": {
+      "title": "Origin",
+      "type": "string"
+     },
+     "provenance": {
+      "enum": [
+       "documented",
+       "accepted_inference",
+       "proposed",
+       "scenario"
+      ],
+      "title": "Provenance",
+      "type": "string"
+     },
+     "rationale": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rationale"
+     },
+     "review_state": {
+      "title": "Review State",
+      "type": "string"
+     },
+     "revision_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Revision Id"
+     },
+     "source": {
+      "title": "Source",
+      "type": "string"
+     },
+     "status": {
+      "default": "unchanged",
+      "enum": [
+       "unchanged",
+       "added",
+       "removed",
+       "modified",
+       "strengthened",
+       "weakened"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "strength": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/EdgeStrength"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "strength_before": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strength Before"
+     },
+     "target": {
+      "title": "Target",
+      "type": "string"
+     },
+     "type": {
+      "title": "Type",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "key",
+     "source",
+     "target",
+     "type",
+     "category",
+     "origin",
+     "basis",
+     "review_state",
+     "provenance"
+    ],
+    "title": "WebEdge",
+    "type": "object"
+   },
+   "WebFocus": {
+    "properties": {
+     "edge_ids": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Edge Ids",
+      "type": "array"
+     },
+     "id": {
+      "title": "Id",
+      "type": "string"
+     },
+     "kind": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kind"
+     },
+     "node_ids": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Node Ids",
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "kind",
+     "node_ids",
+     "edge_ids"
+    ],
+    "title": "WebFocus",
+    "type": "object"
+   },
+   "WebNode": {
+    "properties": {
+     "aggregate": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "integer"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Aggregate"
+     },
+     "classification": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Classification"
+     },
+     "course_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Course Id"
+     },
+     "course_ids": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Course Ids",
+      "type": "array"
+     },
+     "description": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "details": {
+      "additionalProperties": true,
+      "default": {},
+      "title": "Details",
+      "type": "object"
+     },
+     "evidence": {
+      "additionalProperties": true,
+      "default": {},
+      "title": "Evidence",
+      "type": "object"
+     },
+     "id": {
+      "title": "Id",
+      "type": "string"
+     },
+     "is_synthetic": {
+      "default": false,
+      "title": "Is Synthetic",
+      "type": "boolean"
+     },
+     "key": {
+      "title": "Key",
+      "type": "string"
+     },
+     "metrics": {
+      "additionalProperties": true,
+      "default": {},
+      "title": "Metrics",
+      "type": "object"
+     },
+     "metrics_before": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Metrics Before"
+     },
+     "origin": {
+      "title": "Origin",
+      "type": "string"
+     },
+     "status": {
+      "default": "unchanged",
+      "enum": [
+       "unchanged",
+       "added",
+       "removed",
+       "modified",
+       "strengthened",
+       "weakened"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "term": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Term"
+     },
+     "time_index": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Time Index"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "type": {
+      "enum": [
+       "course",
+       "program_outcome",
+       "course_outcome",
+       "assessment",
+       "topic"
+      ],
+      "title": "Type",
+      "type": "string"
+     },
+     "year": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Year"
+     }
+    },
+    "required": [
+     "id",
+     "type",
+     "key",
+     "title",
+     "origin"
+    ],
+    "title": "WebNode",
+    "type": "object"
+   },
+   "WebScenario": {
+    "properties": {
+     "id": {
+      "title": "Id",
+      "type": "string"
+     },
+     "revision": {
+      "title": "Revision",
+      "type": "integer"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "title",
+     "revision"
+    ],
+    "title": "WebScenario",
+    "type": "object"
+   },
+   "WebView": {
+    "properties": {
+     "change_errors": {
+      "default": [],
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Change Errors",
+      "type": "array"
+     },
+     "columns": {
+      "items": {
+       "$ref": "#/components/schemas/WebColumn"
+      },
+      "title": "Columns",
+      "type": "array"
+     },
+     "course_pairs": {
+      "items": {
+       "$ref": "#/components/schemas/CoursePair"
+      },
+      "title": "Course Pairs",
+      "type": "array"
+     },
+     "curriculum_version": {
+      "additionalProperties": true,
+      "title": "Curriculum Version",
+      "type": "object"
+     },
+     "detail": {
+      "enum": [
+       "full",
+       "overview"
+      ],
+      "title": "Detail",
+      "type": "string"
+     },
+     "edges": {
+      "items": {
+       "$ref": "#/components/schemas/WebEdge"
+      },
+      "title": "Edges",
+      "type": "array"
+     },
+     "focus": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/WebFocus"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "gaps": {
+      "items": {
+       "$ref": "#/components/schemas/Gap"
+      },
+      "title": "Gaps",
+      "type": "array"
+     },
+     "gaps_before": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/Gap"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gaps Before"
+     },
+     "nodes": {
+      "items": {
+       "$ref": "#/components/schemas/WebNode"
+      },
+      "title": "Nodes",
+      "type": "array"
+     },
+     "plo_threads": {
+      "items": {
+       "$ref": "#/components/schemas/PloThread"
+      },
+      "title": "Plo Threads",
+      "type": "array"
+     },
+     "scenario": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/WebScenario"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "scorecard": {
+      "$ref": "#/components/schemas/Scorecard"
+     },
+     "scorecard_baseline": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Scorecard"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "stats": {
+      "additionalProperties": true,
+      "title": "Stats",
+      "type": "object"
+     },
+     "strength_model": {
+      "additionalProperties": true,
+      "title": "Strength Model",
+      "type": "object"
+     },
+     "truncated": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Truncated"
+     }
+    },
+    "required": [
+     "curriculum_version",
+     "detail",
+     "strength_model",
+     "columns",
+     "nodes",
+     "edges",
+     "gaps",
+     "plo_threads",
+     "course_pairs",
+     "scorecard",
+     "stats"
+    ],
+    "title": "WebView",
     "type": "object"
    }
   }
@@ -7068,6 +8479,139 @@
     ]
    }
   },
+  "/api/v1/scenarios/{sid}/web": {
+   "get": {
+    "description": "The Alignment Web projected through the scenario, with added / removed / strengthened / weakened status\nagainst the baseline and the baseline scorecard for before/after comparison.",
+    "operationId": "scenario_web_api_v1_scenarios__sid__web_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "sid",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Sid",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "detail",
+      "required": false,
+      "schema": {
+       "default": "auto",
+       "enum": [
+        "auto",
+        "full",
+        "overview"
+       ],
+       "title": "Detail",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "focus",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Focus"
+      }
+     },
+     {
+      "in": "query",
+      "name": "pathway",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Pathway"
+      }
+     },
+     {
+      "in": "query",
+      "name": "compare",
+      "required": false,
+      "schema": {
+       "default": true,
+       "title": "Compare",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WebView"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Scenario Web",
+    "tags": [
+     "scenarios"
+    ]
+   }
+  },
   "/api/v1/versions/{version_id}": {
    "get": {
     "operationId": "get_version_api_v1_versions__version_id__get",
@@ -7140,6 +8684,97 @@
     "summary": "Get Version",
     "tags": [
      "versions"
+    ]
+   }
+  },
+  "/api/v1/versions/{version_id}/ai-alignment": {
+   "post": {
+    "description": "Ask the synthesis model to propose missing alignment links with strengths. Sends element texts (outcome\nstatements, assessment titles, topic names) of this draft version to the `synthesize` route's provider.",
+    "operationId": "ai_alignment_api_v1_versions__version_id__ai_alignment_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/AlignmentRequest"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Body"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Ai Alignment",
+    "tags": [
+     "alignment"
     ]
    }
   },
@@ -8032,6 +9667,189 @@
     ]
    }
   },
+  "/api/v1/versions/{version_id}/relationships/decisions": {
+   "post": {
+    "operationId": "link_decisions_api_v1_versions__version_id__relationships_decisions_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BulkDecisionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Link Decisions Api V1 Versions  Version Id  Relationships Decisions Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Link Decisions",
+    "tags": [
+     "alignment"
+    ]
+   }
+  },
+  "/api/v1/versions/{version_id}/relationships/{key}/decision": {
+   "post": {
+    "description": "Accept, edit (asserted strength / level / rationale), or reject one link. Accepting keeps an interpretation\nlabelled as an interpretation; documented links cannot be rejected here.",
+    "operationId": "link_decision_api_v1_versions__version_id__relationships__key__decision_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "key",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Key",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LinkDecisionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LinkDecisionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Link Decision",
+    "tags": [
+     "alignment"
+    ]
+   }
+  },
   "/api/v1/versions/{version_id}/relationships/{relationship_key}": {
    "get": {
     "operationId": "get_relationship_api_v1_versions__version_id__relationships__relationship_key__get",
@@ -8535,6 +10353,139 @@
     "summary": "Save View",
     "tags": [
      "views"
+    ]
+   }
+  },
+  "/api/v1/versions/{version_id}/web": {
+   "get": {
+    "description": "Alignment Web: every element (program outcomes, courses, course outcomes, assessments, topics) with\nstrength-rated vertical and horizontal links, gaps, program-outcome threads, and a scorecard.",
+    "operationId": "get_web_api_v1_versions__version_id__web_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "detail",
+      "required": false,
+      "schema": {
+       "default": "auto",
+       "enum": [
+        "auto",
+        "full",
+        "overview"
+       ],
+       "title": "Detail",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "focus",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Focus"
+      }
+     },
+     {
+      "in": "query",
+      "name": "pathway",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Pathway"
+      }
+     },
+     {
+      "in": "query",
+      "name": "include_rejected",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Include Rejected",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WebView"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Get Web",
+    "tags": [
+     "graph"
     ]
    }
   }

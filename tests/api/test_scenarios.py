@@ -143,7 +143,8 @@ def test_unknown_workload_and_congestion_reported_honestly(client, v1, ent):
     )
     out = run(client, s)
     wl = out["summary"]["workload"]
-    assert wl["baseline"]["known_hours"] == 0 and wl["scenario"]["unquantified"] > 0
+    # documented assessment hours are known; components without documented hours stay unquantified
+    assert wl["baseline"]["known_hours"] > 0 and wl["scenario"]["unquantified"] > 0
     assert wl["delta"]["estimated_typical"] == 15
     assert out["summary"]["congestion"]["calculable"] is False  # an assessment lacks a documented week
     f = [f for f in out["findings"] if f["rule_id"] == "workload_estimate"][0]
@@ -261,3 +262,165 @@ def test_publish_creates_new_version_and_keeps_base(client, v1, ent):
         ).status_code
         == 409
     )
+
+
+# ───────────────────── alignment: new operations, ripple, threads, horizontal chains ─────────────────────
+
+
+def _web_edge(client, url, src_key, tgt_key, rtype):
+    w = client.get(url).json()
+    keys = {n["id"]: n["key"] for n in w["nodes"]}
+    return next(
+        e for e in w["edges"] if e["type"] == rtype and keys[e["source"]] == src_key and keys[e["target"]] == tgt_key
+    )
+
+
+def test_new_operations_apply_and_replay_deterministically(client, db, v1, ent):
+    import uuid
+
+    s = new_scenario(client, v1, "change anything")
+    plo = ent("PLO7")
+    for ch in [
+        {"op": "modify_course", "entity_id": ent("SYN 340"), "title": "Team Science Studio", "credits": 4},
+        {"op": "modify_program_outcome", "entity_id": plo, "label": "Collaboration and teamwork"},
+        {"op": "add_program_outcome", "label": "Data literacy", "statement": "Use data responsibly."},
+        {"op": "modify_topic", "entity_id": ent("teamwork"), "level": "advanced", "supports": [ent("SYN340-CO1")]},
+        {
+            "op": "change_assessment",
+            "entity_id": ent("SYN340-A1"),
+            "title": "Team project dossier",
+            "documented_hours": 35,
+            "assesses": [ent("SYN340-CO1"), ent("SYN340-CO2")],
+        },
+        {
+            "op": "add_outcome",
+            "course_id": ent("SYN 401"),
+            "statement": "Coordinate a research team.",
+            "contributes": [[plo, "reinforce", 0.8]],
+            "supported_by": [ent("teamwork")],
+        },
+        {
+            "op": "add_assessment",
+            "course_id": ent("SYN 401"),
+            "title": "Team charter",
+            "format": "group project",
+            "weight_percent": 10,
+            "timing_week": 3,
+            "documented_hours": 6,
+            "assesses": [ent("SYN401-CO1")],
+        },
+    ]:
+        s = add_change(client, s, ch)
+    changes = client.get(f"/api/v1/scenarios/{s['id']}/changes").json()
+    assert all(c["applied"] for c in changes) and len(changes) == 7
+    assert "Team project report" in changes[4]["summary"] and "SYN340-CO2" in changes[4]["summary"]
+    base = load_snapshot(db, uuid.UUID(v1))
+    payloads = [(c["seq"], c["payload"]) for c in changes]
+    a, ra = project(base, payloads, s["id"])
+    b, rb = project(base, payloads, s["id"])
+    assert a.content_hash() == b.content_hash() and all(r["ok"] for r in ra)
+    assert a.entities[ent("SYN 340")]["title"] == "Team Science Studio"
+    assert a.by_key("program_outcome", "PLO11-new") is not None
+    # invalid type pair is rejected at the operation level
+    add_change(
+        client,
+        s,
+        {"op": "add_relationship", "source": ent("SYN340-A1"), "target": plo, "rel_type": "supports"},
+        expect=422,
+    )
+
+
+def test_strength_change_is_a_modified_link_that_publishes(client, v1, ent):
+    s = new_scenario(client, v1, "strength")
+    e = _web_edge(client, f"/api/v1/versions/{v1}/web", "SYN101-CO1", "PLO1", "contributes_to")
+    s = add_change(client, s, {"op": "set_relationship_strength", "key": e["key"], "strength": 0.3})
+    s = add_change(
+        client,
+        s,
+        {
+            "op": "add_relationship",
+            "source": ent("cell-biology"),
+            "target": ent("SYN130-CO1"),
+            "rel_type": "supports",
+            "strength": 0.6,
+        },
+    )
+    after = _web_edge(client, f"/api/v1/scenarios/{s['id']}/web", "SYN101-CO1", "PLO1", "contributes_to")
+    assert after["status"] == "weakened" and after["strength_before"] == 0.9 and after["strength"]["effective"] == 0.3
+    cmp = client.get(f"/api/v1/scenarios/{s['id']}/compare").json()
+    assert len(cmp["diff"]["relationships"]["modified"]) == 1
+    r = client.post(
+        f"/api/v1/scenarios/{s['id']}/publish",
+        json={"label": "strength published"},
+        headers={"If-Match": str(s["revision"])},
+    )
+    assert r.status_code == 201, r.text
+    nv = r.json()["version_id"]
+    pub = _web_edge(client, f"/api/v1/versions/{nv}/web", "SYN101-CO1", "PLO1", "contributes_to")
+    assert pub["strength"]["asserted"] == 0.3 and pub["strength"]["asserted_source"] == "scenario"
+    sup = _web_edge(client, f"/api/v1/versions/{nv}/web", "cell-biology", "SYN130-CO1", "supports")
+    assert sup["strength"]["asserted"] == 0.6
+    base_after = _web_edge(client, f"/api/v1/versions/{v1}/web", "SYN101-CO1", "PLO1", "contributes_to")
+    assert base_after["strength"]["asserted"] == 0.9  # the baseline never changes
+
+
+def test_removing_the_only_bridge_breaks_the_horizontal_chain(client, v1, ent):
+    s = new_scenario(client, v1, "bridge")
+    e = _web_edge(client, f"/api/v1/versions/{v1}/web", "SYN110-CO1", "SYN210-CO2", "prepares_for")
+    s = add_change(client, s, {"op": "remove_relationship", "key": e["key"]})
+    out = run(client, s)
+    f = [f for f in out["findings"] if f["rule_id"] == "horizontal_chain_broken"]
+    assert f and "SYN 110 → SYN 210" in f[0]["title"]
+
+
+def test_removing_an_assessment_ripples_outward_in_hops(client, v1, ent):
+    s = new_scenario(client, v1, "ripple")
+    s = add_change(client, s, {"op": "remove_assessment", "entity_id": ent("SYN420-A1")})
+    out = run(client, s)
+    rp = out["summary"]["ripple"]
+    imp = {i["key"]: i for i in rp["impacts"]}
+    assert imp["SYN420-A1"]["hop"] == 0 and imp["SYN420-A1"]["status"] == "removed"
+    assert imp["SYN420-CO1"]["hop"] == 1 and imp["SYN420-CO1"]["status"] == "weakened"
+    assert imp["PLO4"]["hop"] == 2 and imp["PLO4"]["status"] in ("weakened", "affected")
+    assert imp["PLO4"]["path"][0] == ent("SYN420-A1")
+    assert rp["max_hop"] >= 2 and [st["hop"] for st in rp["steps"]] == list(range(rp["max_hop"] + 1))
+    assert ent("SYN420-CO1") in rp["steps"][1]["node_ids"]
+    ranks = [i["rank"] for i in rp["impacts"]]
+    assert ranks == sorted(ranks) and ranks[0] == 1
+    assert any(f["rule_id"] == "outcome_no_longer_assessed" and "SYN420-CO1" in f["title"] for f in out["findings"])
+    sc = out["summary"]["scorecard"]
+    assert set(sc) == {"baseline", "scenario", "delta"}
+    assert sc["delta"]["avg_alignment_strength"] <= 0
+
+
+def test_program_outcome_threads_break_and_improve(client, v1, ent):
+    s = new_scenario(client, v1, "threads")
+    s = add_change(client, s, {"op": "remove_outcome", "entity_id": ent("SYN120-CO2")})
+    out = run(client, s)
+    rules = {f["rule_id"]: f for f in out["findings"]}
+    assert (
+        "PLO9" in rules["plo_thread_broken"]["title"] and "complete → incomplete" in rules["plo_thread_broken"]["title"]
+    )
+    assert any(f["rule_id"] == "orphan_created" and "Five-minute research talk" in f["title"] for f in out["findings"])
+
+    s2 = new_scenario(client, v1, "collab assessed")
+    s2 = add_change(
+        client, s2, {"op": "modify_outcome", "entity_id": ent("SYN340-CO1"), "contributes": [[ent("PLO7"), "assess"]]}
+    )
+    out2 = run(client, s2)
+    assert any(f["rule_id"] == "plo_thread_improved" and "PLO7" in f["title"] for f in out2["findings"])
+    imp = {i["key"]: i for i in out2["summary"]["ripple"]["impacts"]}
+    assert imp["PLO7"]["status"] == "strengthened"
+
+
+def test_ripple_summary_is_deterministic(client, db, v1, ent):
+    import uuid
+
+    base = load_snapshot(db, uuid.UUID(v1))
+    changes = [(1, {"op": "remove_assessment", "entity_id": ent("SYN340-A1")})]
+    sid = str(uuid.uuid4())
+    p1, r1 = project(base, changes, sid)
+    p2, r2 = project(base, changes, sid)
+    a = analyze(base, p1, diff(base, p1), r1)
+    b = analyze(base, p2, diff(base, p2), r2)
+    assert a["summary"]["ripple"] == b["summary"]["ripple"] and a["findings"] == b["findings"]

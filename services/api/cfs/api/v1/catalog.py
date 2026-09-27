@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
@@ -18,6 +18,7 @@ from cfs.api.v1.schemas import (
     VersionCreate,
     VersionOut,
 )
+from cfs.api.v1.schemas_web import WebView
 from cfs.core.audit import audit
 from cfs.core.auth import Principal, get_principal
 from cfs.core.db import get_db
@@ -27,6 +28,7 @@ from cfs.curriculum.service import clone_version
 from cfs.graph import queries
 from cfs.graph.snapshot import Snapshot, load_snapshot
 from cfs.graph.view import build_view
+from cfs.graph.web import build_web
 from cfs.models import (
     CurriculumSource,
     CurriculumVersion,
@@ -139,6 +141,22 @@ def get_graph(
     view["scenario"] = None
     view["scenario_revision"] = None
     return view
+
+
+@router.get("/versions/{version_id}/web", response_model=WebView, tags=["graph"])
+def get_web(
+    version_id: uuid.UUID,
+    detail: Literal["auto", "full", "overview"] = "auto",
+    focus: str | None = None,
+    pathway: str | None = None,
+    include_rejected: bool = False,
+    db: Session = Depends(get_db),
+    p: Principal = Depends(get_principal),
+) -> dict[str, Any]:
+    """Alignment Web: every element (program outcomes, courses, course outcomes, assessments, topics) with
+    strength-rated vertical and horizontal links, gaps, program-outcome threads, and a scorecard."""
+    snap = version_snapshot(db, p, version_id)
+    return build_web(snap, detail=detail, focus=focus, pathway=pathway, include_rejected=include_rejected)
 
 
 @router.get("/versions/{version_id}/table", tags=["graph"])

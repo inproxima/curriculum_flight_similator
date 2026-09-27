@@ -990,6 +990,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scenarios/{sid}/web": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scenario Web
+         * @description The Alignment Web projected through the scenario, with added / removed / strengthened / weakened status
+         *     against the baseline and the baseline scorecard for before/after comparison.
+         */
+        get: operations["scenario_web_api_v1_scenarios__sid__web_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/versions/{version_id}": {
         parameters: {
             query?: never;
@@ -1001,6 +1022,27 @@ export interface paths {
         get: operations["get_version_api_v1_versions__version_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/versions/{version_id}/ai-alignment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Alignment
+         * @description Ask the synthesis model to propose missing alignment links with strengths. Sends element texts (outcome
+         *     statements, assessment titles, topic names) of this draft version to the `synthesize` route's provider.
+         */
+        post: operations["ai_alignment_api_v1_versions__version_id__ai_alignment_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1160,6 +1202,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/versions/{version_id}/relationships/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link Decisions */
+        post: operations["link_decisions_api_v1_versions__version_id__relationships_decisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/versions/{version_id}/relationships/{key}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link Decision
+         * @description Accept, edit (asserted strength / level / rationale), or reject one link. Accepting keeps an interpretation
+         *     labelled as an interpretation; documented links cannot be rejected here.
+         */
+        post: operations["link_decision_api_v1_versions__version_id__relationships__key__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/versions/{version_id}/relationships/{relationship_key}": {
         parameters: {
             query?: never;
@@ -1249,10 +1329,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/versions/{version_id}/web": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Web
+         * @description Alignment Web: every element (program outcomes, courses, course outcomes, assessments, topics) with
+         *     strength-rated vertical and horizontal links, gaps, program-outcome threads, and a scorecard.
+         */
+        get: operations["get_web_api_v1_versions__version_id__web_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AlignmentRequest */
+        AlignmentRequest: {
+            /** Course Ids */
+            course_ids?: string[] | null;
+            /** Kinds */
+            kinds?: ("clo_plo" | "assessment_clo" | "topic_clo" | "clo_clo")[] | null;
+            /**
+             * Max Calls
+             * @default 40
+             */
+            max_calls: number;
+        };
         /** Body_upload_document_api_v1_documents_post */
         Body_upload_document_api_v1_documents_post: {
             /** Academic Year */
@@ -1288,6 +1401,16 @@ export interface components {
             /** Rationale */
             rationale?: string | null;
         };
+        /** BulkDecisionIn */
+        BulkDecisionIn: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "reject";
+            /** Keys */
+            keys: string[];
+        };
         /** ConversationIn */
         ConversationIn: {
             /**
@@ -1299,6 +1422,27 @@ export interface components {
             scenario_id?: string | null;
             /** Title */
             title?: string | null;
+        };
+        /** CoursePair */
+        CoursePair: {
+            /** Course Edge Keys */
+            course_edge_keys: string[];
+            /** Edge Keys */
+            edge_keys: string[];
+            /** Label */
+            label: ("strong" | "moderate" | "weak" | "missing") | null;
+            /** Source Course */
+            source_course: string;
+            /** Source Key */
+            source_key: string;
+            /** Strength */
+            strength: number | null;
+            /** Target Course */
+            target_course: string;
+            /** Target Key */
+            target_key: string;
+            /** Via */
+            via: string;
         };
         /** DocumentOut */
         DocumentOut: {
@@ -1384,6 +1528,29 @@ export interface components {
             /** Retrieval Date */
             retrieval_date?: string | null;
         };
+        /** EdgeBundle */
+        EdgeBundle: {
+            /** Count */
+            count: number;
+            /** Keys */
+            keys: string[];
+            /** Max */
+            max: number | null;
+            /** Min */
+            min: number | null;
+        };
+        /** EdgeStrength */
+        EdgeStrength: {
+            /** Asserted */
+            asserted?: number | null;
+            /** Asserted Source */
+            asserted_source?: string | null;
+            components?: components["schemas"]["StrengthComponents"] | null;
+            /** Effective */
+            effective: number | null;
+            /** Label */
+            label: ("strong" | "moderate" | "weak" | "missing") | null;
+        };
         /** FetchIn */
         FetchIn: {
             /** Academic Year */
@@ -1394,6 +1561,23 @@ export interface components {
             title?: string | null;
             /** Url */
             url: string;
+        };
+        /** Gap */
+        Gap: {
+            /** Entity Ids */
+            entity_ids: string[];
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Message */
+            message: string;
+            /** Severity */
+            severity: string;
+            /** Source */
+            source?: string | null;
+            /** Target */
+            target?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1460,6 +1644,35 @@ export interface components {
              */
             updated_at: string;
         };
+        /** LinkDecisionIn */
+        LinkDecisionIn: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "reject" | "edit";
+            /** Level */
+            level?: ("introduce" | "reinforce" | "assess" | "") | null;
+            /** Rationale */
+            rationale?: string | null;
+            /** Strength */
+            strength?: number | null;
+        };
+        /** LinkDecisionOut */
+        LinkDecisionOut: {
+            /** Key */
+            key: string;
+            /** Level */
+            level: string | null;
+            /** Review State */
+            review_state: string;
+            /** Revision Id */
+            revision_id: string;
+            /** Strength */
+            strength: number | null;
+            /** Strength Source */
+            strength_source: string | null;
+        };
         /** MessageIn */
         MessageIn: {
             /**
@@ -1512,6 +1725,30 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** PloThread */
+        PloThread: {
+            /** Firsts */
+            firsts: {
+                [key: string]: string | null;
+            };
+            /** Label */
+            label: ("strong" | "moderate" | "weak" | "missing") | null;
+            /** Missing */
+            missing: string[];
+            /** Plo Id */
+            plo_id: string;
+            /** Plo Key */
+            plo_key: string;
+            /** Stages */
+            stages: components["schemas"]["ThreadStage"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "complete" | "out_of_order" | "never_assessed" | "incomplete" | "uncovered" | "levels_unstated";
+            /** Strength */
+            strength: number | null;
         };
         /** ProgramIn */
         ProgramIn: {
@@ -1720,6 +1957,35 @@ export interface components {
             /** Title */
             title?: string | null;
         };
+        /** Scorecard */
+        Scorecard: {
+            /** Avg Alignment Strength */
+            avg_alignment_strength: number | null;
+            /** Broken Chains */
+            broken_chains: number;
+            /** Gaps */
+            gaps: {
+                [key: string]: number;
+            };
+            /** Links */
+            links: {
+                [key: string]: number;
+            };
+            /** Orphans */
+            orphans: {
+                [key: string]: number;
+            };
+            /** Plo Assessed Coverage */
+            plo_assessed_coverage: number | null;
+            /** Plo Documented Coverage */
+            plo_documented_coverage: number | null;
+            /** Threads Complete */
+            threads_complete: {
+                [key: string]: number;
+            };
+            /** Weak Chains */
+            weak_chains: number;
+        };
         /** SourceAssign */
         SourceAssign: {
             /** Applicability */
@@ -1806,6 +2072,44 @@ export interface components {
             /** Quote */
             quote: string;
         };
+        /** StrengthComponents */
+        StrengthComponents: {
+            /** Intensity */
+            intensity: number;
+            /** Support */
+            support: number;
+            /** Trust */
+            trust: number;
+        };
+        /** ThreadStage */
+        ThreadStage: {
+            /** Assessed */
+            assessed: boolean;
+            /** Assessment Ids */
+            assessment_ids: string[];
+            /** Clo Id */
+            clo_id: string | null;
+            /** Clo Key */
+            clo_key: string | null;
+            /** Course Id */
+            course_id: string | null;
+            /** Course Key */
+            course_key: string | null;
+            /** Effective */
+            effective: number | null;
+            /** Label */
+            label: ("strong" | "moderate" | "weak" | "missing") | null;
+            /** Level */
+            level: string | null;
+            /** Provenance */
+            provenance: string;
+            /** Relationship Key */
+            relationship_key: string;
+            /** Term */
+            term: string | null;
+            /** Year */
+            year: number | null;
+        };
         /** UploadResult */
         UploadResult: {
             document_version: components["schemas"]["DocumentVersionOut"];
@@ -1866,6 +2170,220 @@ export interface components {
             published_at: string | null;
             /** Status */
             status: string;
+        };
+        /** WebColumn */
+        WebColumn: {
+            /** Band */
+            band: string;
+            /** Course Id */
+            course_id: string;
+            /** Key */
+            key: string;
+            /** Term */
+            term: string | null;
+            /** Time Index */
+            time_index: number | null;
+            /** Title */
+            title: string;
+            /** Year */
+            year: number | null;
+        };
+        /** WebEdge */
+        WebEdge: {
+            /** Basis */
+            basis: string;
+            bundle?: components["schemas"]["EdgeBundle"] | null;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "vertical" | "horizontal" | "containment" | "overlap";
+            /**
+             * Contradicted
+             * @default false
+             */
+            contradicted: boolean;
+            /**
+             * Has Evidence
+             * @default false
+             */
+            has_evidence: boolean;
+            /** Id */
+            id: string;
+            /** Key */
+            key: string | null;
+            /** Level */
+            level?: string | null;
+            /** Origin */
+            origin: string;
+            /**
+             * Provenance
+             * @enum {string}
+             */
+            provenance: "documented" | "accepted_inference" | "proposed" | "scenario";
+            /** Rationale */
+            rationale?: string | null;
+            /** Review State */
+            review_state: string;
+            /** Revision Id */
+            revision_id?: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @default unchanged
+             * @enum {string}
+             */
+            status: "unchanged" | "added" | "removed" | "modified" | "strengthened" | "weakened";
+            strength?: components["schemas"]["EdgeStrength"] | null;
+            /** Strength Before */
+            strength_before?: number | null;
+            /** Target */
+            target: string;
+            /** Type */
+            type: string;
+        };
+        /** WebFocus */
+        WebFocus: {
+            /** Edge Ids */
+            edge_ids: string[];
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string | null;
+            /** Node Ids */
+            node_ids: string[];
+        };
+        /** WebNode */
+        WebNode: {
+            /** Aggregate */
+            aggregate?: {
+                [key: string]: number;
+            } | null;
+            /** Classification */
+            classification?: string | null;
+            /** Course Id */
+            course_id?: string | null;
+            /**
+             * Course Ids
+             * @default []
+             */
+            course_ids: string[];
+            /** Description */
+            description?: string | null;
+            /**
+             * Details
+             * @default {}
+             */
+            details: {
+                [key: string]: unknown;
+            };
+            /**
+             * Evidence
+             * @default {}
+             */
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Id */
+            id: string;
+            /**
+             * Is Synthetic
+             * @default false
+             */
+            is_synthetic: boolean;
+            /** Key */
+            key: string;
+            /**
+             * Metrics
+             * @default {}
+             */
+            metrics: {
+                [key: string]: unknown;
+            };
+            /** Metrics Before */
+            metrics_before?: {
+                [key: string]: unknown;
+            } | null;
+            /** Origin */
+            origin: string;
+            /**
+             * Status
+             * @default unchanged
+             * @enum {string}
+             */
+            status: "unchanged" | "added" | "removed" | "modified" | "strengthened" | "weakened";
+            /** Term */
+            term?: string | null;
+            /** Time Index */
+            time_index?: number | null;
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "course" | "program_outcome" | "course_outcome" | "assessment" | "topic";
+            /** Year */
+            year?: number | null;
+        };
+        /** WebScenario */
+        WebScenario: {
+            /** Id */
+            id: string;
+            /** Revision */
+            revision: number;
+            /** Title */
+            title: string;
+        };
+        /** WebView */
+        WebView: {
+            /**
+             * Change Errors
+             * @default []
+             */
+            change_errors: {
+                [key: string]: unknown;
+            }[];
+            /** Columns */
+            columns: components["schemas"]["WebColumn"][];
+            /** Course Pairs */
+            course_pairs: components["schemas"]["CoursePair"][];
+            /** Curriculum Version */
+            curriculum_version: {
+                [key: string]: unknown;
+            };
+            /**
+             * Detail
+             * @enum {string}
+             */
+            detail: "full" | "overview";
+            /** Edges */
+            edges: components["schemas"]["WebEdge"][];
+            focus?: components["schemas"]["WebFocus"] | null;
+            /** Gaps */
+            gaps: components["schemas"]["Gap"][];
+            /** Gaps Before */
+            gaps_before?: components["schemas"]["Gap"][] | null;
+            /** Nodes */
+            nodes: components["schemas"]["WebNode"][];
+            /** Plo Threads */
+            plo_threads: components["schemas"]["PloThread"][];
+            scenario?: components["schemas"]["WebScenario"] | null;
+            scorecard: components["schemas"]["Scorecard"];
+            scorecard_baseline?: components["schemas"]["Scorecard"] | null;
+            /** Stats */
+            stats: {
+                [key: string]: unknown;
+            };
+            /** Strength Model */
+            strength_model: {
+                [key: string]: unknown;
+            };
+            /** Truncated */
+            truncated?: {
+                [key: string]: unknown;
+            } | null;
         };
     };
     responses: never;
@@ -4184,6 +4702,45 @@ export interface operations {
             };
         };
     };
+    scenario_web_api_v1_scenarios__sid__web_get: {
+        parameters: {
+            query?: {
+                detail?: "auto" | "full" | "overview";
+                focus?: string | null;
+                pathway?: string | null;
+                compare?: boolean;
+            };
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_version_api_v1_versions__version_id__get: {
         parameters: {
             query?: never;
@@ -4205,6 +4762,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VersionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_alignment_api_v1_versions__version_id__ai_alignment_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AlignmentRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -4561,6 +5156,85 @@ export interface operations {
             };
         };
     };
+    link_decisions_api_v1_versions__version_id__relationships_decisions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_decision_api_v1_versions__version_id__relationships__key__decision_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                version_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkDecisionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_relationship_api_v1_versions__version_id__relationships__relationship_key__get: {
         parameters: {
             query?: never;
@@ -4768,6 +5442,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SavedViewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_web_api_v1_versions__version_id__web_get: {
+        parameters: {
+            query?: {
+                detail?: "auto" | "full" | "overview";
+                focus?: string | null;
+                pathway?: string | null;
+                include_rejected?: boolean;
+            };
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebView"];
                 };
             };
             /** @description Validation Error */

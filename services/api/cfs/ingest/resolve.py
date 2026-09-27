@@ -274,8 +274,16 @@ def resolve_candidates(
     for c in candidates:
         cand_ctx.clear()
         cand_ctx.update(c)
+        if c["kind"] in ("outcome", "assessment", "topic") and c.get("origin") == "model":
+            # Course-outline content only applies where the course is part of this version.
+            if _member(db, cv, org, EntityType.course, c["course"])[0] is None:
+                stats["course_not_in_version"] = stats.get("course_not_in_version", 0) + 1
+                continue
         if c["kind"] == "course":
             ent, rev = _member(db, cv, org, EntityType.course, c["code"])
+            if ent is None and c.get("detail_only"):
+                stats["course_not_in_version"] = stats.get("course_not_in_version", 0) + 1
+                continue
             if ent is None and _merge_open(db, cv, f"course:{c['code']}:", c, src, dv):
                 stats["merged"] = stats.get("merged", 0) + 1
                 continue
@@ -300,7 +308,20 @@ def resolve_candidates(
                 )
                 continue
             stats["matched"] += 1
-            if rev.title.strip().lower() != c["title"].strip().lower():
+            if rev.title.strip().upper() == c["code"] and c["title"] != c["code"]:
+                # The version only knew the code; the source documents the title.
+                item(
+                    ReviewItemKind.conflicting_requirement,
+                    f"{c['code']}: title documented in source",
+                    f"field:{c['code']}:title",
+                    {"type": "field", "code": c["code"], "field": "title", "existing": None, "document": c["title"]},
+                    [c["span_id"]],
+                    subject=ent.id,
+                    detail="The curriculum version has no title for this course. Accepting records the documented one.",
+                )
+            elif c.get("detail_only") and c["title"] == c["code"]:
+                pass  # the source gave no verifiable title; nothing to compare
+            elif " ".join(rev.title.split()).lower() != " ".join(c["title"].split()).lower():
                 item(
                     ReviewItemKind.possible_duplicate,
                     f"{c['code']}: title differs between sources",
@@ -334,6 +355,17 @@ def resolve_candidates(
                 if same:
                     _attach(db, rev, fname, f.get("span_id"))
                     stats["evidence_attached"] += 1
+                elif current is None and c.get("detail_only") and fname in ("credits", "description"):
+                    item(
+                        ReviewItemKind.conflicting_requirement,
+                        f"{c['code']}: {fname} documented in source",
+                        f"field:{c['code']}:{fname}",
+                        {"type": "field", "code": c["code"], "field": fname, "existing": None, "document": f["value"]},
+                        [f.get("span_id")],
+                        subject=ent.id,
+                        detail="The curriculum version has no value for this field. "
+                        "Accepting records the documented one.",
+                    )
                 elif current is not None:
                     item(
                         ReviewItemKind.conflicting_requirement,
@@ -444,6 +476,7 @@ def resolve_candidates(
                     {
                         "entity_type": "assessment",
                         **{k: c[k] for k in ("key", "course", "title", "format", "weight", "week", "assesses")},
+                        "timing_text": c.get("timing_text"),
                         "span_id": c["span_id"],
                     },
                     [c["span_id"]],
@@ -541,6 +574,23 @@ def resolve_candidates(
                 detail="The source describes expected earlier learning without naming a formal prerequisite. "
                 "Which courses provide it is an interpretation; accepting keeps it labelled inferred.",
             )
+        elif c["kind"] == "topic":
+            ent, rev = _member(db, cv, org, EntityType.topic, c["key"])
+            if ent is None:
+                item(
+                    ReviewItemKind.candidate_entity,
+                    f"New topic for {c['course']}: {c['title'][:80]}",
+                    f"topic:{c['key']}",
+                    {"entity_type": "topic", **{k: c[k] for k in ("key", "course", "title")}, "span_id": c["span_id"]},
+                    [c["span_id"]],
+                )
+            else:
+                stats["matched"] += 1
+                _attach(db, rev, "title", c["span_id"])
+                stats["evidence_attached"] += 1
+                stats["evidence_attached"] += _attach_rel(
+                    db, cv, c["span_id"], rel_types={RelType.covers_topic}, target=ent.id
+                )
         elif c["kind"] == "mention":
             if c["code"] in known_codes or _open_item(db, cv, f"course:{c['code']}:"):
                 continue

@@ -468,6 +468,7 @@ class RelationshipRevision(Base):
         Index("ix_rel_rev_source_type", "source_entity_id", "rel_type"),
         Index("ix_rel_rev_target_type", "target_entity_id", "rel_type"),
         CheckConstraint("source_entity_id <> target_entity_id", name="no_self_loop"),
+        CheckConstraint("strength IS NULL OR (strength >= 0 AND strength <= 1)", name="strength_range"),
     )
     id: Mapped[uuid.UUID] = uuid_pk()
     organization_id: Mapped[uuid.UUID] = org_fk()
@@ -483,6 +484,11 @@ class RelationshipRevision(Base):
     contribution_level: Mapped[ContributionLevel | None] = mapped_column(str_enum(ContributionLevel))
     requirement_rule_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("requirement_rules.id"))
     rationale: Mapped[str | None] = mapped_column(Text)
+    # Asserted alignment strength (0–1) from an AI estimate, reviewer, fixture, or scenario. The strong/moderate/weak
+    # label is always computed (cfs.analysis.alignment), never stored.
+    strength: Mapped[Decimal | None] = mapped_column(Numeric(4, 3))
+    strength_source: Mapped[str | None] = mapped_column(String(20))
+    model_run_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("model_runs.id"))
     is_synthetic: Mapped[bool] = mapped_column(Boolean, default=False)
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = ts_now()

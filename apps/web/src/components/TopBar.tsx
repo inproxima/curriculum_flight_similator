@@ -14,7 +14,8 @@ export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
   const jobs = useJobs(true);
 
   useEffect(() => {
-    if (!programId && programs.data?.length) setProgram(programs.data[0].id);
+    // also recover when a remembered program no longer exists (e.g. after a database reset)
+    if (programs.data?.length && (!programId || !programs.data.some((p) => p.id === programId))) setProgram(programs.data[0].id);
   }, [programs.data, programId, setProgram]);
   useEffect(() => {
     const vs = versions.data;
@@ -51,7 +52,8 @@ export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
       )}
       <NavLink to="/documents" className="badge" title="Document processing jobs">{running ? `⏳ ${running} processing` : "Documents idle"}</NavLink>
       <nav aria-label="Views">
-        <NavLink to="/" end>Map</NavLink>
+        <NavLink to="/" end title="Alignment web: how everything connects">Web</NavLink>
+        <NavLink to="/sequence" title="Year/term sequence map of courses and prerequisites">Sequence</NavLink>
         <NavLink to="/table">Table</NavLink>
         <NavLink to="/matrix">Outcomes</NavLink>
         <NavLink to="/scenarios">Scenarios</NavLink>
@@ -61,7 +63,7 @@ export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
       </nav>
       <UserBadge />
       <button className={assistantOpen ? "primary" : ""} aria-pressed={assistantOpen} onClick={() => setAssistantOpen(!assistantOpen)}
-        title="Open the grounded assistant (map view)">Assistant</button>
+        title="Open the grounded assistant">Assistant</button>
     </header>
   );
 }

@@ -20,18 +20,27 @@ import json
 from collections import defaultdict
 from typing import Any
 
+from cfs.analysis import alignment as al
 from cfs.analysis.coverage import detect_issues, outcome_matrix
 from cfs.graph.queries import evaluate_rules, exposure, owner_courses
 from cfs.graph.snapshot import Snapshot, time_index
 
 # Bump on ANY change to engine or cfs.analysis.coverage rules: cached runs are keyed on this version.
-ENGINE_VERSION = "engine-1.3.0"
+ENGINE_VERSION = "engine-1.4.0"
 SEV = {"info": 0, "low": 1, "medium": 2, "high": 3}
 RULE_RANK = {"satisfied_for_all": 3, "conditional": 2, "unknown": 1, "unsatisfied": 0}
 
 # Typed propagation: which relationship types carry impact from a changed element, and in which direction.
-PROPAGATE_FORWARD = {"formal_prerequisite", "inferred_preparation", "prepares_for", "contributes_to"}
+PROPAGATE_FORWARD = {"formal_prerequisite", "inferred_preparation", "prepares_for", "contributes_to", "supports"}
 PROPAGATE_REVERSE = {"assesses"}  # an assessment depends on the outcome it assesses
+EDGE_PRIORITY = {
+    "formal_prerequisite": 0,
+    "inferred_preparation": 0,
+    "prepares_for": 0,
+    "assesses": 1,
+    "contributes_to": 2,
+    "supports": 3,
+}
 
 
 def input_hash(base: Snapshot, changes: list[tuple[int, dict]], pathway: str | None) -> str:
@@ -77,7 +86,8 @@ def _propagate(base: Snapshot, seeds: set[str], max_depth: int = 6) -> dict[str,
     Returns node → {depth, path, edges, inferred} using typed edges only.
     """
     out_edges: dict[str, list[dict]] = defaultdict(list)
-    for r in sorted(base.relationships.values(), key=lambda r: r["key"]):
+    # dependency links first, so a documented preparation path wins over a parallel alignment path
+    for r in sorted(base.relationships.values(), key=lambda r: (EDGE_PRIORITY.get(r["type"], 9), r["key"])):
         if r["review_state"] in ("rejected", "superseded"):
             continue
         if r["type"] in PROPAGATE_FORWARD:
@@ -550,6 +560,10 @@ def analyze(
                 )
             )
 
+    # ── 7. Alignment: strength changes, program-outcome threads, horizontal chains, ripple ──
+    align_findings, ripple, scorecard = alignment_impact(base, proj, d, pathway)
+    findings.extend(align_findings)
+
     # ── ordering & summary ──
     order = {
         "direct_documented": 0,
@@ -576,9 +590,11 @@ def analyze(
             "changes": {
                 "entities": {s: sum(1 for v in ents.values() if v == s) for s in ("added", "removed", "modified")},
                 "relationships": {
-                    s: sum(1 for v in d["relationships"].values() if v == s) for s in ("added", "removed")
+                    s: sum(1 for v in d["relationships"].values() if v == s) for s in ("added", "removed", "modified")
                 },
             },
+            "ripple": ripple,
+            "scorecard": scorecard,
             "by_class": dict(sorted(counts.items())),
             "coverage": {"baseline": mb["coverage"], "scenario": mp["coverage"]},
             "workload": workload,
@@ -685,3 +701,356 @@ def congestion(
             else f"{missing} assessments lack documented weeks or placement; congestion for them cannot be calculated."
         ),
     }
+
+
+# ─────────────────────────── alignment impact and ripple ───────────────────────────
+
+# How a change travels outward, hop by hop (the "butterfly effect"). Typed, never "everything reachable":
+#   assessment → the outcome it assesses · topic → the outcome it supports · outcome → program outcome
+#   outcome / assessment → later outcome it prepares for · course → what it contains and courses that depend on it
+#   a changed outcome also reaches the assessments that assess it (first hop only)
+RIPPLE_FORWARD = {
+    "assesses",
+    "supports",
+    "contributes_to",
+    "prepares_for",
+    "formal_prerequisite",
+    "inferred_preparation",
+    "has_outcome",
+    "has_assessment",
+    "covers_topic",
+}
+STATUS_ORDER = ["removed", "added", "broken", "weakened", "strengthened", "modified", "affected"]
+IMPACT_RANK = {"broken": 0, "removed": 1, "weakened": 2, "added": 3, "strengthened": 4, "modified": 5, "affected": 6}
+THREAD_RANK = {
+    "complete": 0,
+    "out_of_order": 1,
+    "levels_unstated": 1,
+    "incomplete": 2,
+    "never_assessed": 3,
+    "uncovered": 4,
+}
+IMPACT_SEVERITY = {
+    "broken": "high",
+    "removed": "medium",
+    "weakened": "medium",
+    "added": "info",
+    "strengthened": "info",
+    "modified": "low",
+    "affected": "info",
+}
+
+
+def _union(base: Snapshot, proj: Snapshot) -> tuple[dict[str, dict], dict[str, dict]]:
+    ents = {**base.entities, **proj.entities}
+    rels = {**base.relationships, **proj.relationships}
+    return ents, rels
+
+
+def ripple_walk(base: Snapshot, proj: Snapshot, seeds: set[str], max_depth: int = 6) -> dict[str, dict[str, Any]]:
+    """BFS over the union of baseline and scenario links, so both removals and additions travel."""
+    _ents, rels = _union(base, proj)
+    fwd: dict[str, list[dict]] = defaultdict(list)
+    rev: dict[str, list[dict]] = defaultdict(list)
+    for r in sorted(rels.values(), key=lambda r: (EDGE_PRIORITY.get(r["type"], 9), r["key"])):
+        if r["review_state"] in ("rejected", "superseded"):
+            continue
+        if r["type"] in RIPPLE_FORWARD:
+            fwd[r["source"]].append(r)
+        if r["type"] == "assesses":
+            rev[r["target"]].append(r)
+    reached = {s: {"hop": 0, "path": [s], "edges": []} for s in seeds}
+    frontier = sorted(seeds)
+    for hop in range(1, max_depth + 1):
+        nxt = []
+        for n in frontier:
+            steps = [(r, r["target"]) for r in fwd.get(n, [])]
+            if hop == 1:
+                steps += [(r, r["source"]) for r in rev.get(n, [])]
+            for r, to in steps:
+                if to in reached:
+                    continue
+                reached[to] = {"hop": hop, "path": reached[n]["path"] + [to], "edges": reached[n]["edges"] + [r["key"]]}
+                nxt.append(to)
+        frontier = sorted(nxt)
+        if not frontier:
+            break
+    return reached
+
+
+def alignment_impact(
+    base: Snapshot, proj: Snapshot, d: dict[str, Any], pathway: str | None
+) -> tuple[list[dict], dict[str, Any], dict[str, Any]]:
+    bi, pi = al.alignment_index(base, pathway), al.alignment_index(proj, pathway)
+    ents, rels = _union(base, proj)
+    findings: list[dict[str, Any]] = []
+    ent_st, rel_st = d["entities"], dict(d["relationships"])
+    for k, st in al.compare_edges(bi, pi).items():
+        if rel_st.get(k) in (None, "modified"):
+            rel_st[k] = st
+
+    def key(eid: str) -> str:
+        return (ents.get(eid) or {}).get("key", eid[:8])
+
+    # seeds are the edits themselves: changed elements, plus the source of each edited link whose endpoints were not
+    # themselves added or removed. Links that merely got stronger or weaker are consequences, not causes.
+    seeds = set(ent_st)
+    for k in d["relationships"]:
+        r = rels.get(k)
+        if (
+            r is None
+            or ent_st.get(r["source"]) in ("added", "removed")
+            or ent_st.get(r["target"]) in ("added", "removed")
+        ):
+            continue
+        seeds.add(r["source"])
+    reached = ripple_walk(base, proj, seeds)
+
+    # node statuses
+    b_threads = {t["plo_id"]: t for t in bi["threads"]}
+    p_threads = {t["plo_id"]: t for t in pi["threads"]}
+    impacts: dict[str, dict[str, Any]] = {}
+    for eid in sorted(set(reached) | set(ent_st) | set(bi["nodes"]) & set(pi["nodes"])):
+        e = ents.get(eid)
+        if not e:
+            continue
+        bm, pm = bi["nodes"].get(eid, {}), pi["nodes"].get(eid, {})
+        b, a = bm.get("score"), pm.get("score")
+        status = ent_st.get(eid)
+        if status is None and bm and pm:
+            if bm.get("label") not in (None, "missing") and pm.get("label") == "missing":
+                status = "broken"
+            elif (
+                e["type"] == "program_outcome"
+                and eid in b_threads
+                and eid in p_threads
+                and (
+                    THREAD_RANK[p_threads[eid]["status"]] > THREAD_RANK[b_threads[eid]["status"]]
+                    and p_threads[eid]["status"] in ("never_assessed", "uncovered")
+                )
+            ):
+                status = "broken"
+            elif b is not None and a is not None and abs(a - b) >= al.DELTA:
+                status = "strengthened" if a > b else "weakened"
+        if status is None:
+            if eid not in reached or reached[eid]["hop"] == 0:
+                continue
+            status = "affected"
+        info = reached.get(eid, {"hop": 1, "path": [eid], "edges": []})
+        impacts[eid] = {
+            "entity_id": eid,
+            "key": e["key"],
+            "title": e["title"],
+            "type": e["type"],
+            "course_key": key(owner_courses(proj, eid)[0])
+            if e["type"] not in ("course", "program_outcome") and owner_courses(proj, eid)
+            else (
+                key(owner_courses(base, eid)[0])
+                if e["type"] not in ("course", "program_outcome") and owner_courses(base, eid)
+                else None
+            ),
+            "status": status,
+            "hop": info["hop"],
+            "path": info["path"],
+            "edge_keys": info["edges"],
+            "strength_before": b,
+            "strength_after": a,
+        }
+
+    # explanations and ranking
+    for imp in impacts.values():
+        via = " → ".join(key(x) for x in imp["path"])
+        delta = (
+            f" ({imp['strength_before']:.2f} → {imp['strength_after']:.2f})"
+            if imp["strength_before"] is not None
+            and imp["strength_after"] is not None
+            and imp["strength_before"] != imp["strength_after"]
+            else ""
+        )
+        noun = {
+            "program_outcome": "Program outcome",
+            "course_outcome": "Outcome",
+            "assessment": "Assessment",
+            "topic": "Topic",
+            "course": "Course",
+        }.get(imp["type"], imp["type"])
+        txt = f"{noun} {imp['key']} {imp['status']}{delta}"
+        if imp["hop"] > 0 and len(imp["path"]) > 1:
+            txt += f", reached in {imp['hop']} step{'s' if imp['hop'] > 1 else ''} via {via}"
+        if imp["type"] == "program_outcome" and imp["entity_id"] in p_threads and imp["entity_id"] in b_threads:
+            bt, pt = b_threads[imp["entity_id"]]["status"], p_threads[imp["entity_id"]]["status"]
+            if bt != pt:
+                txt += f"; thread {bt.replace('_', ' ')} → {pt.replace('_', ' ')}"
+        imp["explanation"] = txt + "."
+        imp["severity"] = IMPACT_SEVERITY[imp["status"]]
+    ordered = sorted(
+        impacts.values(),
+        key=lambda i: (
+            IMPACT_RANK[i["status"]],
+            i["type"] != "program_outcome",
+            i["hop"],
+            -abs((i["strength_after"] or 0) - (i["strength_before"] or 0)),
+            i["key"],
+        ),
+    )
+    for n, imp in enumerate(ordered, start=1):
+        imp["rank"] = n
+
+    # edges by hop (an edge lights up when the later of its endpoints is reached)
+    edge_hop: dict[str, int] = {}
+    for k in rel_st:
+        r = rels.get(k)
+        if r is None:
+            continue
+        hs = [reached[x]["hop"] for x in (r["source"], r["target"]) if x in reached]
+        edge_hop[k] = max(hs) if hs else 0
+    for imp in impacts.values():
+        for i, k in enumerate(imp["edge_keys"]):
+            edge_hop.setdefault(k, i + 1)
+    max_hop = max([i["hop"] for i in impacts.values()] + list(edge_hop.values()) + [0])
+    steps = [
+        {
+            "hop": h,
+            "node_ids": sorted(i["entity_id"] for i in impacts.values() if i["hop"] == h),
+            "edge_keys": sorted(k for k, eh in edge_hop.items() if eh == h),
+        }
+        for h in range(0, max_hop + 1)
+    ]
+    ripple = {
+        "max_hop": max_hop,
+        "steps": steps,
+        "impacts": ordered,
+        "edge_status": dict(sorted(rel_st.items())),
+    }
+
+    # ── findings ──
+    def path_for(eid: str) -> list[list[str]]:
+        return [reached[eid]["path"]] if eid in reached and len(reached[eid]["path"]) > 1 else []
+
+    for eid in sorted(ent_st):
+        if ent_st[eid] == "removed" and base.entities.get(eid, {}).get("type") == "program_outcome":
+            e = base.entities[eid]
+            findings.append(
+                _finding(
+                    "plo_removed",
+                    "high",
+                    "direct_documented",
+                    "explicit_statement",
+                    f"Program outcome {e['title']} is removed",
+                    "Every course outcome that contributed to it loses that alignment.",
+                    [eid],
+                    category="alignment",
+                )
+            )
+    for plo_id, bt in b_threads.items():
+        pt = p_threads.get(plo_id)
+        if not pt or pt["status"] == bt["status"]:
+            continue
+        worse = THREAD_RANK[pt["status"]] > THREAD_RANK[bt["status"]]
+        findings.append(
+            _finding(
+                "plo_thread_broken" if worse else "plo_thread_improved",
+                ("high" if pt["status"] in ("uncovered", "never_assessed") else "medium") if worse else "info",
+                "direct_documented" if worse else "indirect_potential",
+                "explicit_statement",
+                f"{bt['plo_key']} thread {'weakens' if worse else 'improves'}: {bt['status'].replace('_', ' ')} → "
+                f"{pt['status'].replace('_', ' ')}",
+                (f"Missing stages now: {', '.join(pt['missing']) or 'none'}. " if pt["missing"] else "")
+                + f"Thread strength {bt['strength'] or 0:.2f} → {pt['strength'] or 0:.2f}.",
+                [plo_id],
+                paths=path_for(plo_id),
+                category="alignment",
+                suggested_actions=["Add or re-align a course outcome and an assessment at the missing stage."]
+                if worse
+                else [],
+            )
+        )
+    b_pairs = {(p["source_course"], p["target_course"]): p for p in bi["course_pairs"]}
+    for p in pi["course_pairs"]:
+        bp = b_pairs.get((p["source_course"], p["target_course"]))
+        if not bp or bp["label"] == p["label"]:
+            continue
+        rank = {"missing": 0, "weak": 1, "moderate": 2, "strong": 3}
+        if rank[p["label"]] < rank[bp["label"]]:
+            broken = p["label"] == "missing"
+            findings.append(
+                _finding(
+                    "horizontal_chain_broken" if broken else "horizontal_chain_weakened",
+                    "medium" if broken else "low",
+                    "direct_documented" if broken else "indirect_potential",
+                    "explicit_statement" if broken else "interpretation",
+                    f"{p['source_key']} → {p['target_key']}: bridge {'lost' if broken else 'weakened'} "
+                    f"({bp['label']} → {p['label']})",
+                    "No remaining learning outcome or assessment in the earlier course is linked to the later one."
+                    if broken
+                    else f"Best outcome-level bridge {bp['strength'] or 0:.2f} → {p['strength'] or 0:.2f}.",
+                    [p["source_course"], p["target_course"]],
+                    edge_keys=sorted(set(bp["edge_keys"]) - set(p["edge_keys"])),
+                    category="alignment",
+                )
+            )
+    orphan_kinds = {"clo_no_plo", "assessment_no_clo", "topic_no_clo"}
+    before_gaps = {g["id"] for g in bi["gaps"]}
+    for g in pi["gaps"]:
+        if g["kind"] == "clo_unassessed" and g["id"] not in before_gaps and g["entity_ids"][0] in base.entities:
+            eid = g["entity_ids"][0]
+            findings.append(
+                _finding(
+                    "outcome_no_longer_assessed",
+                    "medium",
+                    "direct_documented",
+                    "explicit_statement",
+                    f"{key(eid)} is no longer assessed",
+                    "No remaining assessment is linked to this course outcome, so the program outcomes it contributes "
+                    "to lose evidence from this course.",
+                    [eid],
+                    paths=path_for(eid),
+                    category="alignment",
+                    suggested_actions=["Link another assessment to this outcome, or add one."],
+                )
+            )
+    for g in pi["gaps"]:
+        if g["kind"] in orphan_kinds and g["id"] not in before_gaps:
+            eid = g["entity_ids"][0]
+            findings.append(
+                _finding(
+                    "orphan_created",
+                    "medium",
+                    "direct_documented",
+                    "explicit_statement",
+                    f"{g['message']} (new in this scenario)",
+                    "Something this element was linked to was removed or changed.",
+                    [eid],
+                    paths=path_for(eid),
+                    category="alignment",
+                )
+            )
+    for k, st in sorted(rel_st.items()):
+        if st not in ("strengthened", "weakened"):
+            continue
+        r = rels[k]
+        if r["type"] not in ("contributes_to", "assesses"):
+            continue
+        b, a = bi["edges"].get(k), pi["edges"].get(k)
+        if not b or not a or b["label"] == a["label"]:
+            continue
+        findings.append(
+            _finding(
+                f"alignment_{st}",
+                "low" if st == "weakened" else "info",
+                "indirect_potential",
+                "interpretation",
+                f"{key(r['source'])} → {key(r['target'])} {st}: {b['label']} → {a['label']}",
+                f"Effective strength {b['effective']:.2f} → {a['effective']:.2f} (trust × intensity × support).",
+                [r["source"], r["target"]],
+                edge_keys=[k],
+                category="alignment",
+            )
+        )
+
+    scorecard = {
+        "baseline": bi["scorecard"],
+        "scenario": pi["scorecard"],
+        "delta": al.scorecard_delta(bi["scorecard"], pi["scorecard"]),
+    }
+    return findings, ripple, scorecard

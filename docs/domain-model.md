@@ -32,14 +32,20 @@ Separate columns for **origin** (`extracted`, `manual`, `ai_inferred`, `rule_der
 `accepted`, `rejected`, `superseded`). Accepting an inferred relationship changes the review state only. Relabeling
 an interpretation as an explicit statement is refused (`basis_relabel_forbidden`).
 
+Alignment links also carry an asserted **strength** (0–1), its **strength_source** (`ai_estimate`, `reviewer`,
+`fixture`, `scenario`), and, for AI proposals, the `model_run_id`. The strong/moderate/weak label is computed by
+`cfs.analysis.alignment` and never stored (ADR 0003). `TYPE_PAIRS` in that module lists the allowed endpoint
+types for each relationship type.
+
 | Type | Direction | Propagates impact? |
 |---|---|---|
 | `formal_prerequisite` | prerequisite course → dependent course (derived from a rule; OR members flagged) | yes (evaluated against the rule) |
 | `corequisite` | symmetric | no (not a cycle) |
 | `inferred_preparation` | earlier course → later course | yes, as *uncertain* |
-| `prepares_for` | topic/outcome → later topic/outcome | yes |
+| `prepares_for` | topic/outcome/assessment → later topic/outcome (horizontal alignment) | yes |
 | `contributes_to` | course outcome → program outcome (I/R/A level when stated) | yes (coverage) |
 | `assesses` | assessment → outcome | reverse (assessment depends on outcome) |
+| `supports` | topic (or activity) → course outcome | yes |
 | `has_outcome`, `covers_topic`, `has_assessment` | course → member | containment only |
 | `possible_overlap` | symmetric | **never** |
 
@@ -48,12 +54,18 @@ an interpretation as an explicit statement is refused (`basis_relabel_forbidden`
 assumptions)`. Operations: `add_course`, `remove_course`, `move_course`, `set_classification`, `add_outcome`,
 `remove_outcome`, `modify_outcome`, `add_topic`, `remove_topic`, `change_assessment` (absolute or relative
 weeks), `add_assessment`, `remove_assessment`, `change_delivery`, `set_workload` (low/typical/high assumption),
-`modify_requirement`, `add_relationship`, `remove_relationship`.
+`modify_requirement`, `add_relationship`, `remove_relationship`, and for the Alignment Web: `modify_course`,
+`add_program_outcome`, `modify_program_outcome`, `remove_program_outcome`, `modify_topic` (including the outcomes
+it supports), `change_assessment` (title, description, hours, and the outcomes it assesses), and
+`set_relationship_strength`. Contributions may carry an asserted strength. The diff reports relationships as
+added, removed, or **modified**, and publishing revises modified links in place.
 
 `analysis_runs(scenario_revision, input_hash, algorithm_version)` → `findings(consequence_class, severity,
 evidence_basis, affected ids, assumptions, suggested actions)` + `finding_paths` + `finding_evidence`.
 Consequence classes: `direct_documented`, `indirect_potential`, `uncertain_inferred`, `judgment_needed`,
 `missing_evidence`. A run is **stale** when the scenario's revision or input hash has changed since it ran.
+The run summary also holds `ripple` (elements reached per hop, ranked impacts with status and path) and a
+`scorecard` (baseline, scenario, delta).
 
 ## Operations
 `jobs` + `job_events` (durable progress; SSE replays from `Last-Event-ID`), `review_items` +

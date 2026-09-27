@@ -18,6 +18,7 @@ from cfs.curriculum.service import (
     clone_version,
     create_relationship,
     create_revision,
+    revise_relationship,
     set_membership,
 )
 from cfs.graph.snapshot import Snapshot
@@ -70,6 +71,7 @@ def _details(e: dict[str, Any]) -> dict[str, Any]:
             "weight_percent": d.get("weight_percent"),
             "timing_week": d.get("timing_week"),
             "timing_text": d.get("timing_text"),
+            "documented_hours": d.get("documented_hours"),
             **(
                 {
                     "estimated_hours_low": d["workload_assumptions"]["assessment"]["low"],
@@ -220,6 +222,30 @@ def materialize(
             )
             continue
         r = proj.relationships[k]
+        if st == "modified":
+            current = db.scalar(
+                select(RelationshipRevision)
+                .join(
+                    CurriculumRelationshipMembership,
+                    CurriculumRelationshipMembership.relationship_revision_id == RelationshipRevision.id,
+                )
+                .where(
+                    CurriculumRelationshipMembership.curriculum_version_id == cv,
+                    CurriculumRelationshipMembership.relationship_key == uuid.UUID(k),
+                )
+            )
+            if current is not None:
+                changes: dict = {
+                    "contribution_level": ContributionLevel(r["level"]) if r["level"] else None,
+                    "strength": r.get("strength"),
+                    "strength_source": r.get("strength_source") if r.get("strength") is not None else None,
+                    "review_state": ReviewState(r["review_state"]),
+                    "rationale": r["rationale"],
+                }
+                if r["basis"] != current.evidence_basis.value and r["basis"] != "explicit_statement":
+                    changes["evidence_basis"] = EvidenceBasis(r["basis"])
+                revise_relationship(db, cv, current, created_by=p.user_id, **changes)
+                continue
         create_relationship(
             db,
             p.org_id,
@@ -234,6 +260,8 @@ def materialize(
             rule_id=rule_map.get(r["rule_id"]) if r["rule_id"] else None,
             rationale=r["rationale"] or f"Added in scenario '{s.title}'",
             created_by=p.user_id,
+            strength=r.get("strength"),
+            strength_source=r.get("strength_source") or "scenario",
         )
     # drop memberships of relationships touching removed entities (cloned from base)
     removed_ids = [uuid.UUID(e) for e, st in d["entities"].items() if st == "removed"]

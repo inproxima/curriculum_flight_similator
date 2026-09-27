@@ -129,7 +129,7 @@ def test_downstream_prefers_documented_paths(client, v1, ent):
 
 def test_outcome_matrix_defines_denominator_and_unknowns(client, v1):
     m = client.get(f"/api/v1/versions/{v1}/outcome-matrix").json()
-    assert m["coverage"]["denominator"] == 8 and "divided by all program outcomes" in m["coverage"]["definition"]
+    assert m["coverage"]["denominator"] == 10 and "divided by all program outcomes" in m["coverage"]["definition"]
     rows = {r["course"]["key"]: r for r in m["rows"]}
     assert all(c["state"] == "insufficient" for c in rows["SYN 350"]["cells"].values())
     plo6 = [c for c in m["columns"] if c["plo"]["key"] == "PLO6"][0]

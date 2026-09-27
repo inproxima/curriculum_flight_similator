@@ -4,6 +4,7 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  applyNodeChanges,
   useReactFlow,
   type Edge,
   type Node,
@@ -61,8 +62,15 @@ function MapInner({ view, savedPositions, onPositionsChange }: {
   const rf = useReactFlow();
   const [auto, setAuto] = useState<Pos>({});
   const [overrides, setOverrides] = useState<Pos>(savedPositions);
+  const overridesRef = useRef<Pos>(overrides);
+  overridesRef.current = overrides;
   const [layoutMs, setLayoutMs] = useState<number | null>(null);
   const [dragPos, setDragPos] = useState<Pos>({});
+  const dragPosRef = useRef<Pos>({});
+  dragPosRef.current = dragPos;
+  // React Flow's own view of the nodes, including the `measured` sizes it reports back. Nodes rebuilt
+  // without `measured` count as uninitialized and are hidden, which blanked the map during a drag.
+  const [rfNodes, setRfNodes] = useState<Node[]>([]);
 
   useEffect(() => setOverrides(savedPositions), [savedPositions]);
 
@@ -174,26 +182,34 @@ function MapInner({ view, savedPositions, onPositionsChange }: {
     [gEdges, hlEdges, hlActive, selection],
   );
 
+  useEffect(() => {
+    setRfNodes((prev) => {
+      const byId = new Map(prev.map((n) => [n.id, n]));
+      return nodes.map((n) => {
+        const p = byId.get(n.id);
+        return p?.measured ? { ...n, measured: p.measured } : n;
+      });
+    });
+  }, [nodes]);
+
   const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setRfNodes((ns) => applyNodeChanges(changes, ns));
+    const moved: Pos = {};
     for (const c of changes) {
-      if (c.type === "position" && c.position && !c.id.startsWith("lane:")) {
-        const { id, position, dragging } = c;
-        if (dragging) setDragPos((d) => ({ ...d, [id]: position }));
-        else {
-          setDragPos((d) => {
-            const { [id]: last, ...rest } = d;
-            const final = position ?? last;
-            if (final) {
-              setOverrides((o) => {
-                const next = { ...o, [id]: final };
-                onPositionsChange(next);
-                return next;
-              });
-            }
-            return rest;
-          });
-        }
+      if (c.type !== "position" || c.id.startsWith("lane:")) continue;
+      const { id, position, dragging } = c;
+      if (dragging) {
+        if (position) setDragPos((d) => ({ ...d, [id]: position }));
+        continue;
       }
+      const final = position ?? dragPosRef.current[id];
+      if (final) moved[id] = final;
+      setDragPos(({ [id]: _, ...rest }) => rest);
+    }
+    if (Object.keys(moved).length) {
+      const next = { ...overridesRef.current, ...moved };
+      setOverrides(next);
+      onPositionsChange(next);
     }
   }, [onPositionsChange]);
 
@@ -214,7 +230,7 @@ function MapInner({ view, savedPositions, onPositionsChange }: {
         {layoutMs !== null && <span className="badge" title="Measured on this machine">layout {layoutMs.toFixed(0)} ms</span>}
       </div>
       <ReactFlow
-        nodes={nodes}
+        nodes={rfNodes}
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}

@@ -4,9 +4,10 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 import cfs.handlers  # noqa: F401  (register job handlers for eager mode)
-from cfs.api.v1 import admin, ai, analysis, catalog, documents, scenarios, system
+from cfs.api.v1 import admin, ai, alignment, analysis, catalog, documents, scenarios, system
 from cfs.core.config import get_settings
 from cfs.core.errors import AppError, app_error_handler
 from cfs.core.security import SecurityHeaders
@@ -21,6 +22,7 @@ app = FastAPI(
 )
 app.add_exception_handler(AppError, app_error_handler)
 app.add_middleware(SecurityHeaders)
+app.add_middleware(GZipMiddleware, minimum_size=2048)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -29,5 +31,14 @@ app.add_middleware(
     expose_headers=["ETag"],
 )
 
-for r in (system.router, admin.router, ai.router, catalog.router, documents.router, analysis.router, scenarios.router):
+for r in (
+    system.router,
+    admin.router,
+    ai.router,
+    alignment.router,
+    catalog.router,
+    documents.router,
+    analysis.router,
+    scenarios.router,
+):
     app.include_router(r, prefix="/api/v1")

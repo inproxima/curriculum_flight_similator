@@ -94,6 +94,13 @@ def validate_url(url: str) -> tuple[str, str, int, str]:
 
 
 def fetch(url: str, *, transport: httpx.BaseTransport | None = None) -> Fetched:
+    try:
+        return _fetch(url, transport)
+    except httpx.TransportError as e:  # TLS, DNS, timeouts: report, don't 500
+        raise FetchRefused(f"Could not retrieve the page ({type(e).__name__}): {e}") from e
+
+
+def _fetch(url: str, transport: httpx.BaseTransport | None) -> Fetched:
     s = get_settings()
     current, redirects = url, []
     with httpx.Client(timeout=15, follow_redirects=False, transport=transport) as client:

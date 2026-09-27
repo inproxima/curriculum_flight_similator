@@ -59,8 +59,9 @@ def course_lines(c: dict[str, Any], fx: dict[str, Any]) -> list[tuple[str, str]]
     if c.get("outcomes"):
         lines.append(("h3", "Learning outcomes"))
         for o in c["outcomes"]:
-            contrib = "; ".join(f"{plo} {LEVEL_LABEL[lvl]}" for plo, lvl in o.get("contributes", []))
-            lines.append(("p", f"{o['key']}: {o['statement']} (Program outcomes: {contrib})"))
+            contrib = "; ".join(f"{x[0]} {LEVEL_LABEL[x[1]]}" for x in o.get("contributes", []))
+            suffix = f" (Program outcomes: {contrib})" if contrib else ""
+            lines.append(("p", f"{o['key']}: {o['statement']}{suffix}"))
     if c.get("assessments"):
         lines.append(("h3", "Assessments"))
         for a in c["assessments"]:
@@ -68,8 +69,8 @@ def course_lines(c: dict[str, Any], fx: dict[str, Any]) -> list[tuple[str, str]]
             lines.append(
                 (
                     "p",
-                    f"{a['key']}: {a['title']} ({a['format']}, {a['weight']}%{wk}). "
-                    f"Assesses: {', '.join(a['assesses'])}.",
+                    f"{a['key']}: {a['title']} ({a['format']}, {a['weight']}%{wk})."
+                    + (f" Assesses: {', '.join(a['assesses'])}." if a.get("assesses") else ""),
                 )
             )
     return lines

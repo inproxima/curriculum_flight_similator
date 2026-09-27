@@ -25,6 +25,7 @@ from cfs.curriculum.service import (
     create_revision,
     get_or_create_entity,
     place_course,
+    revise_course_field,
     revise_relationship,
     set_membership,
 )
@@ -101,7 +102,7 @@ def decide(
     elif decision == "reject":
         if item.kind == ReviewItemKind.inferred_mapping and item.subject_relationship_revision_id:
             assert_draft(db, item.curriculum_version_id)
-            rel = db.get(RelationshipRevision, item.subject_relationship_revision_id)
+            rel = _current_for_item(db, item)
             new = revise_relationship(
                 db, item.curriculum_version_id, rel, review_state=ReviewState.rejected, created_by=p.user_id
             )
@@ -154,8 +155,11 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
         return _materialize_proposal(db, p, item, cv, payload)
 
     if kind == ReviewItemKind.inferred_mapping:
-        rel = db.get(RelationshipRevision, item.subject_relationship_revision_id)
-        new = revise_relationship(db, cv, rel, review_state=ReviewState.accepted, created_by=p.user_id)
+        rel = _current_for_item(db, item)
+        changes: dict[str, Any] = {"review_state": ReviewState.accepted}
+        if edited_strength := payload.get("strength_override"):
+            changes.update(strength=float(edited_strength), strength_source="reviewer")
+        new = revise_relationship(db, cv, rel, created_by=p.user_id, **changes)
         return {
             "relationship_revision_id": str(new.id),
             "review_state": "accepted",
@@ -163,6 +167,8 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
         }
 
     if kind == ReviewItemKind.candidate_entity:
+        # Model-proposed candidates (quote-verified) keep an AI origin; rule-extracted ones stay "extracted".
+        src_origin = Origin.ai_inferred if payload.get("origin") == "model" else Origin.extracted
         et = payload["entity_type"]
         span = _uuid(payload.get("span_id"))
         if et == "program_outcome":
@@ -171,7 +177,7 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                 db,
                 e,
                 title=f"{payload['key']}: {payload['label']}",
-                origin=Origin.extracted,
+                origin=src_origin,
                 created_by=p.user_id,
                 details={"statement_verbatim": payload.get("statement"), "normalized_label": payload["label"][:300]},
             )
@@ -190,7 +196,7 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                 e,
                 title=payload["title"],
                 description=val("description"),
-                origin=Origin.extracted,
+                origin=src_origin,
                 details={"credits": val("credits")},
                 created_by=p.user_id,
             )
@@ -220,7 +226,7 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                 db,
                 e,
                 title=payload["statement"],
-                origin=Origin.extracted,
+                origin=src_origin,
                 created_by=p.user_id,
                 details={"statement_verbatim": payload["statement"], "normalized_label": payload["statement"][:300]},
             )
@@ -234,7 +240,7 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                 course.id,
                 e.id,
                 RelType.has_outcome,
-                origin=Origin.extracted,
+                origin=src_origin,
                 basis=EvidenceBasis.explicit_statement,
                 review=ReviewState.accepted,
                 evidence=ev,
@@ -250,7 +256,7 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                         e.id,
                         plo.id,
                         RelType.contributes_to,
-                        origin=Origin.extracted,
+                        origin=src_origin,
                         basis=EvidenceBasis.explicit_statement,
                         review=ReviewState.accepted,
                         level=ContributionLevel(lvl),
@@ -264,12 +270,13 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                 db,
                 e,
                 title=payload["title"],
-                origin=Origin.extracted,
+                origin=src_origin,
                 created_by=p.user_id,
                 details={
                     "format": payload.get("format"),
                     "weight_percent": payload.get("weight"),
                     "timing_week": payload.get("week"),
+                    "timing_text": payload.get("timing_text"),
                 },
             )
             set_membership(db, cv, e, rev)
@@ -280,7 +287,7 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                 course.id,
                 e.id,
                 RelType.has_assessment,
-                origin=Origin.extracted,
+                origin=src_origin,
                 basis=EvidenceBasis.explicit_statement,
                 review=ReviewState.accepted,
                 evidence=ev,
@@ -296,12 +303,32 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                         e.id,
                         o.id,
                         RelType.assesses,
-                        origin=Origin.extracted,
+                        origin=src_origin,
                         basis=EvidenceBasis.explicit_statement,
                         review=ReviewState.accepted,
                         evidence=ev,
                         created_by=p.user_id,
                     )
+            return {"entity_id": str(e.id)}
+        if et == "topic":
+            e = get_or_create_entity(db, org, EntityType.topic, payload["key"])
+            rev = create_revision(db, e, title=payload["title"], origin=src_origin, created_by=p.user_id)
+            set_membership(db, cv, e, rev)
+            if span:
+                add_field_evidence(db, rev, "title", span)
+            create_relationship(
+                db,
+                org,
+                cv,
+                course.id,
+                e.id,
+                RelType.covers_topic,
+                origin=src_origin,
+                basis=EvidenceBasis.explicit_statement,
+                review=ReviewState.accepted,
+                evidence=ev,
+                created_by=p.user_id,
+            )
             return {"entity_id": str(e.id)}
         raise AppError(f"Unsupported entity type {et}")
 
@@ -321,6 +348,8 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
         )
 
     if kind == ReviewItemKind.conflicting_requirement:
+        if payload.get("type") == "field" and payload.get("existing") is None and choice is None:
+            choice = "proposed"  # filling an unknown field; there is no existing value to keep
         if choice not in ("existing", "proposed"):
             raise AppError(
                 "Choose which interpretation applies: choice='existing' or 'proposed'", code="choice_required"
@@ -363,6 +392,10 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                 Term(value) if field == "term" else PlacementClass(value) if field == "classification" else int(value),
             )
             return {"kept": "proposed", "placement_id": str(pl.id), field: value}
+        if field in ("title", "credits", "description") and ent.entity_type == EntityType.course:
+            span = item.evidence_span_ids[0] if item.evidence_span_ids else None
+            rev = revise_course_field(db, cv, ent, field, value, span, created_by=p.user_id)
+            return {"kept": "proposed", "revision_id": str(rev.id), field: value}
         raise AppError(f"Field '{field}' changes must be made through a new entity revision (not yet supported here)")
     raise AppError(f"No materialization for {kind.value}")
 
@@ -566,3 +599,102 @@ def _materialize_proposal(db: Session, p: Principal, item: ReviewItem, cv: uuid.
         )
         return {"relationship_revision_id": str(r.id), "evidence_basis": "interpretation"}
     raise AppError(f"Unknown proposal type {kind}")
+
+
+# ─────────────────────── inline link decisions (Alignment Web) ───────────────────────
+
+
+def current_revision(db: Session, cv: uuid.UUID, key: uuid.UUID) -> RelationshipRevision | None:
+    """The revision of a relationship that version `cv` currently points at (revisions are immutable)."""
+    return db.scalar(
+        select(RelationshipRevision)
+        .join(
+            CurriculumRelationshipMembership,
+            CurriculumRelationshipMembership.relationship_revision_id == RelationshipRevision.id,
+        )
+        .where(
+            CurriculumRelationshipMembership.curriculum_version_id == cv,
+            CurriculumRelationshipMembership.relationship_key == key,
+        )
+    )
+
+
+def _current_for_item(db: Session, item: ReviewItem) -> RelationshipRevision:
+    """A review item remembers the revision it was raised on; later edits (e.g. a strength change) create newer
+    revisions, and decisions must apply to the one the version points at now."""
+    rel = db.get(RelationshipRevision, item.subject_relationship_revision_id)
+    return current_revision(db, item.curriculum_version_id, rel.relationship_key) or rel
+
+
+def decide_relationship(
+    db: Session,
+    p: Principal,
+    cv: uuid.UUID,
+    key: uuid.UUID,
+    decision: str,
+    *,
+    strength: float | None = None,
+    level: str | None = None,
+    rationale: str | None = None,
+) -> RelationshipRevision:
+    """Accept, edit (strength / level / rationale, then accept), or reject one link in a draft version.
+
+    Accepting never relabels an interpretation as documented. Documented links are changed through their sources,
+    so they can be edited (strength) but not rejected here. Open review items raised on the link are closed.
+    """
+    from cfs.core.errors import NotFound
+
+    p.require(Role.reviewer)
+    assert_draft(db, cv)
+    cur = current_revision(db, cv, key)
+    if cur is None:
+        raise NotFound("Relationship is not part of this curriculum version")
+    documented = cur.evidence_basis == EvidenceBasis.explicit_statement and cur.review_state == ReviewState.accepted
+    if decision == "reject" and documented:
+        raise Conflict(
+            "Documented links come from a source statement; change the source or model the change in a scenario.",
+            code="documented_link",
+        )
+    if strength is not None and not 0 <= strength <= 1:
+        raise AppError("strength must be between 0 and 1", code="invalid_strength")
+    changes: dict[str, Any] = {}
+    if decision == "accept":
+        changes["review_state"] = ReviewState.accepted
+    elif decision == "reject":
+        changes["review_state"] = ReviewState.rejected
+    elif decision == "edit":
+        changes["review_state"] = ReviewState.accepted
+        if strength is not None:
+            changes.update(strength=strength, strength_source="reviewer")
+        if level is not None:
+            changes["contribution_level"] = ContributionLevel(level) if level else None
+        if rationale is not None:
+            changes["rationale"] = rationale
+    else:
+        raise AppError(f"Unknown decision {decision}", code="invalid_decision")
+    new = revise_relationship(db, cv, cur, created_by=p.user_id, **changes)
+
+    status = {
+        "accept": ReviewItemStatus.accepted,
+        "edit": ReviewItemStatus.edited,
+        "reject": ReviewItemStatus.rejected,
+    }[decision]
+    history = select(RelationshipRevision.id).where(RelationshipRevision.relationship_key == key)
+    for item in db.scalars(
+        select(ReviewItem).where(
+            ReviewItem.curriculum_version_id == cv,
+            ReviewItem.subject_relationship_revision_id.in_(history),
+            ReviewItem.status.in_([ReviewItemStatus.open, ReviewItemStatus.deferred]),
+        )
+    ):
+        item.status = status
+        db.add(ReviewDecision(review_item_id=item.id, decision=status, rationale=rationale, decided_by=p.user_id))
+    audit(
+        db,
+        p,
+        f"link.{decision}",
+        "relationship",
+        key,
+        {"revision_id": str(new.id), "strength": strength, "level": level},
+    )
+    return new

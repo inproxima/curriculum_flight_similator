@@ -154,6 +154,9 @@ def create_relationship(
     is_synthetic: bool = False,
     evidence: list[tuple[uuid.UUID, EvidenceStance]] | None = None,
     created_by: uuid.UUID | None = None,
+    strength: float | None = None,
+    strength_source: str | None = None,
+    model_run_id: uuid.UUID | None = None,
 ) -> RelationshipRevision:
     if rel_type == RelType.possible_overlap and str(source) > str(target):
         source, target = target, source
@@ -173,6 +176,9 @@ def create_relationship(
         scope=scope,
         is_synthetic=is_synthetic,
         created_by=created_by,
+        strength=strength,
+        strength_source=strength_source if strength is not None else None,
+        model_run_id=model_run_id,
     )
     db.add(rev)
     db.flush()
@@ -229,6 +235,9 @@ def revise_relationship(
             "contribution_level",
             "requirement_rule_id",
             "rationale",
+            "strength",
+            "strength_source",
+            "model_run_id",
             "is_synthetic",
         )
     }
@@ -258,6 +267,63 @@ def revise_relationship(
         m.relationship_revision_id = new.id
     db.flush()
     return new
+
+
+def revise_course_field(
+    db: Session,
+    version_id: uuid.UUID,
+    entity: Entity,
+    field: str,
+    value: Any,
+    span_id: uuid.UUID | None,
+    *,
+    created_by: uuid.UUID | None = None,
+) -> EntityRevision:
+    """New course revision in this version with one documented field changed (title, credits, description).
+
+    Other versions keep their revision. Field evidence of unchanged fields is carried over."""
+    m = db.scalar(
+        select(CurriculumEntityMembership).where(
+            CurriculumEntityMembership.curriculum_version_id == version_id,
+            CurriculumEntityMembership.entity_id == entity.id,
+        )
+    )
+    old = db.get(EntityRevision, m.entity_revision_id)
+    det = db.get(CourseRevisionDetails, old.id)
+    title = value if field == "title" else old.title
+    credits = value if field == "credits" else (det.credits if det else None)
+    rev = create_revision(
+        db,
+        entity,
+        title=title,
+        description=value if field == "description" else old.description,
+        metadata=dict(old.metadata_ or {}),
+        origin=old.origin,
+        is_synthetic=old.is_synthetic,
+        details={"credits": credits, "title": title},
+        created_by=created_by,
+    )
+    for ev in db.scalars(select(EntityFieldEvidence).where(EntityFieldEvidence.entity_revision_id == old.id)):
+        if ev.field_name != field:
+            db.add(
+                EntityFieldEvidence(
+                    entity_revision_id=rev.id,
+                    field_name=ev.field_name,
+                    evidence_span_id=ev.evidence_span_id,
+                    stance=ev.stance,
+                )
+            )
+    if span_id:
+        add_field_evidence(db, rev, field, span_id)
+    set_membership(db, version_id, entity, rev)
+    for pl in db.scalars(
+        select(CoursePlacement).where(
+            CoursePlacement.curriculum_version_id == version_id, CoursePlacement.entity_id == entity.id
+        )
+    ):
+        pl.entity_revision_id = rev.id
+    db.flush()
+    return rev
 
 
 def place_course(db: Session, version_id: uuid.UUID, entity: Entity, rev: EntityRevision, **kw: Any) -> CoursePlacement:

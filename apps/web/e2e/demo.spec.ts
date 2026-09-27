@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function pickEntity(page: Page, text: string, key: string) {
+  await page.getByRole("link", { name: "Sequence", exact: true }).click();
   const box = page.getByRole("searchbox", { name: "Search" });
   await box.fill(text);
   await page.getByRole("option", { name: new RegExp(`^course ${key}`) }).click();
@@ -20,7 +21,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("select program and version; synthetic data is labelled", async ({ page }) => {
-  await expect(page.getByRole("status")).toContainText("not University of Calgary curriculum data");
+  await expect(page.getByRole("status").first()).toContainText("not University of Calgary curriculum data");
+  await page.getByRole("link", { name: "Sequence", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Program" })).toContainText("[SYNTHETIC]");
   await expect(page.getByRole("combobox", { name: "Curriculum version and cohort" })).toContainText("published");
   await expect(page.locator(".course-node").first()).toBeVisible();
@@ -57,7 +59,6 @@ test("create and edit a scenario, analyse, reload and reopen", async ({ page }) 
   await page.getByRole("button", { name: "Create scenario" }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 
-  await page.getByRole("link", { name: "Map", exact: true }).click();
   await pickEntity(page, "SYN 310", "SYN 310");
   await page.getByRole("tab", { name: "Scenario edit" }).click();
   await page.getByRole("button", { name: /Remove SYN 310/ }).click();
@@ -77,7 +78,7 @@ test("create and edit a scenario, analyse, reload and reopen", async ({ page }) 
   await expect(page.getByText("Assumption: Appraisal content moves elsewhere")).toBeVisible();
 
   await page.getByRole("button", { name: "Show on map" }).first().click();
-  await expect(page.getByText(/Highlighting:/)).toBeVisible();
+  await expect(page.getByText(/Highlighting:/).first()).toBeVisible();
 });
 
 test("accessible table alternative is keyboard navigable", async ({ page }) => {
@@ -95,7 +96,7 @@ test("accessible table alternative is keyboard navigable", async ({ page }) => {
 
 test("outcome matrix explains its denominator", async ({ page }) => {
   await page.getByRole("link", { name: "Outcomes" }).click();
-  await expect(page.getByText(/Documented coverage: \d+\/8 program outcomes/)).toBeVisible();
+  await expect(page.getByText(/Documented coverage: \d+\/10 program outcomes/)).toBeVisible();
   await expect(page.getByText(/divided by all program outcomes/).first()).toBeVisible();
   await page.getByRole("tab", { name: "Potential issues" }).click();
   await expect(page.getByText(/PLO6 .* has no documented assessment/)).toBeVisible();
@@ -127,6 +128,11 @@ test("assistant panel renders a verified envelope (network-mocked, no model call
     meta: { mode: "explore", route: "extract", provider: "openai", model: "gpt-6-sol", cost_usd: 0.01, input_tokens: 1, output_tokens: 1, tool_calls: ["get_entity"], fallback_from: null, label: "AI interpretation", model_run_id: "x" },
   };
   let asked = false;
+  // self-contained: report the model routes as available even when the server has no provider keys
+  await page.route("**/api/v1/ai/status", (r) => r.fulfill({ json: { implemented: true, providers: {}, allowlist: {}, retrieval_mode: "fts", message: "",
+    limits: { monthly_budget_usd: 1, max_cost_per_job_usd: 1 }, spend: { month_usd: 0 },
+    routes: ["extract", "pedagogy", "synthesize", "critique"].map((name) => ({ name, provider: "openai", model: "gpt-6-sol", purpose: "", fallback: null,
+      available: true, active: ["openai", "gpt-6-sol"], unavailable_reasons: [] })) } }));
   await page.route("**/api/v1/conversations?*", (r) => r.fulfill({ json: [] }));
   await page.route("**/api/v1/conversations", (r) => r.fulfill({ status: 201, json: { id: convId, scenario_id: null } }));
   await page.route(`**/api/v1/conversations/${convId}/messages`, (r) => {
@@ -142,6 +148,7 @@ test("assistant panel renders a verified envelope (network-mocked, no model call
   await page.route("**/api/v1/jobs/j1/stream", (r) => r.fulfill({ contentType: "text/event-stream",
     body: 'id: 1\nevent: job\ndata: {"message":"Reading SYN 407","status":"progress","job":{"status":"succeeded"}}\n\nevent: end\ndata: {}\n\n' }));
 
+  await page.reload(); // the AI status is cached from the first load; pick up the mock
   await page.getByRole("button", { name: "Assistant", exact: true }).click();
   await page.getByRole("textbox", { name: "Ask the assistant" }).fill("What does SYN 407 build on?");
   await page.getByRole("button", { name: "Send" }).click();
@@ -151,6 +158,6 @@ test("assistant panel renders a verified envelope (network-mocked, no model call
   await expect(panel.getByText("1 item(s) removed by verification")).toBeVisible();
   await expect(panel.getByRole("button", { name: /Synthetic Program Outline p\.7/ })).toBeVisible();
   await panel.getByRole("button", { name: "Highlight on map" }).click();
-  await expect(page.getByText(/Highlighting:/)).toBeVisible();
+  await expect(page.getByText(/Highlighting:/).first()).toBeVisible();
   await expect(panel.getByRole("button", { name: /Apply in new scenario/ })).toBeVisible();
 });

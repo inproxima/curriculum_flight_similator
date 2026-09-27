@@ -369,6 +369,7 @@ def run_view(
                     "affected": [ent(x) for x in f.affected_entity_ids],
                     "assumptions": f.assumptions,
                     "suggested_actions": f.suggested_actions,
+                    "hop": min((len(p_.entity_ids) - 1 for p_ in paths), default=None),
                     "paths": [
                         {
                             "ordinal": p_.ordinal,
@@ -481,7 +482,7 @@ def _named_diff(left: Snapshot, right: Snapshot, d: dict) -> dict[str, Any]:
                 (rel(k) for k, st in d["relationships"].items() if st == s),
                 key=lambda x: (x["type"], x["source"] or "", x["target"] or ""),
             )
-            for s in ("added", "removed")
+            for s in ("added", "removed", "modified")
         },
     }
 

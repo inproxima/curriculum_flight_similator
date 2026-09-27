@@ -42,6 +42,8 @@ program_outcomes:
   - {key: PLO6, label: Ethics and professionalism, statement: "Identify and reason about ethical issues in biomedical research."}
   - {key: PLO7, label: Collaboration, statement: "Collaborate effectively in multidisciplinary scientific teams."}
   - {key: PLO8, label: Independent inquiry, statement: "Conduct an independent, supervised research inquiry."}
+  - {key: PLO9, label: Oral communication, statement: "Present scientific ideas orally to peers and non-specialist audiences."}
+  - {key: PLO10, label: Critical thinking, statement: "Evaluate evidence and arguments to reach reasoned, defensible conclusions."}
 
 topics:
   - {key: cell-biology, title: Cell biology, area: Foundations, level: introductory}
@@ -71,7 +73,7 @@ courses:
     description: Structure and function of eukaryotic cells, membranes, organelles, and the cell cycle.
     topics: [cell-biology]
     outcomes:
-      - {key: SYN101-CO1, statement: "Describe the structure and function of major cellular organelles.", contributes: [[PLO1, introduce]]}
+      - {key: SYN101-CO1, statement: "Describe the structure and function of major cellular organelles.", contributes: [[PLO1, introduce, 0.9]], supported_by: [cell-biology]}
     assessments:
       - {key: SYN101-A1, title: Midterm examination, format: exam, weight: 35, week: 7, assesses: [SYN101-CO1]}
       - {key: SYN101-A2, title: Final examination, format: exam, weight: 45, week: 14, assesses: [SYN101-CO1]}
@@ -85,7 +87,7 @@ courses:
     description: Chemical bonding, thermodynamics, and reaction kinetics applied to biological systems.
     topics: [chemistry-foundations]
     outcomes:
-      - {key: SYN102-CO1, statement: "Apply principles of chemical equilibrium to biological reactions.", contributes: [[PLO1, introduce]]}
+      - {key: SYN102-CO1, statement: "Apply principles of chemical equilibrium to biological reactions.", contributes: [[PLO1, introduce]], supported_by: [chemistry-foundations]}
     assessments:
       - {key: SYN102-A1, title: Problem sets, format: assignment, weight: 30, week: null, assesses: [SYN102-CO1]}
 
@@ -98,7 +100,7 @@ courses:
     description: Descriptive statistics, probability, hypothesis testing, and confidence intervals with health examples.
     topics: [stats-intro]
     outcomes:
-      - {key: SYN110-CO1, statement: "Select and interpret basic inferential statistical tests.", contributes: [[PLO2, introduce]]}
+      - {key: SYN110-CO1, statement: "Select and interpret basic inferential statistical tests.", contributes: [[PLO2, introduce], [PLO10, introduce, 0.5]], supported_by: [stats-intro]}
     assessments:
       - {key: SYN110-A1, title: Statistics quizzes, format: quiz, weight: 20, week: 5, assesses: [SYN110-CO1]}
       - {key: SYN110-A2, title: Final examination, format: exam, weight: 50, week: 14, assesses: [SYN110-CO1]}
@@ -112,9 +114,11 @@ courses:
     description: Introduction to scientific writing, referencing, and oral presentation.
     topics: [scientific-writing]
     outcomes:
-      - {key: SYN120-CO1, statement: "Write a structured scientific summary using discipline conventions.", contributes: [[PLO4, introduce]]}
+      - {key: SYN120-CO1, statement: "Write a structured scientific summary using discipline conventions.", contributes: [[PLO4, introduce]], supported_by: [scientific-writing]}
+      - {key: SYN120-CO2, statement: "Deliver a short oral presentation of a scientific finding.", contributes: [[PLO9, introduce]], supported_by: [scientific-writing]}
     assessments:
-      - {key: SYN120-A1, title: Research summary, format: written assignment, weight: 40, week: 9, assesses: [SYN120-CO1]}
+      - {key: SYN120-A1, title: Research summary, format: written assignment, weight: 40, week: 9, hours: 12, assesses: [SYN120-CO1]}
+      - {key: SYN120-A2, title: Five-minute research talk, format: oral presentation, weight: 20, week: 12, hours: 6, assesses: [SYN120-CO2]}
 
   - code: SYN 130
     title: Introduction to Human Physiology
@@ -126,7 +130,9 @@ courses:
     description: Organ-system physiology with emphasis on homeostasis.
     topics: [physiology]
     outcomes:
-      - {key: SYN130-CO1, statement: "Explain homeostatic regulation across organ systems.", contributes: [[PLO1, reinforce]]}
+      - {key: SYN130-CO1, statement: "Explain homeostatic regulation across organ systems.", contributes: [[PLO1, reinforce]], supported_by: [physiology]}
+    assessments:
+      - {key: SYN130-A1, title: Physiology lab report, format: lab report, weight: 30, week: 9, hours: 8, assesses: [SYN130-CO1]}
 
   - code: SYN 201
     title: Molecular Genetics
@@ -138,7 +144,7 @@ courses:
     description: Gene structure, expression, regulation, and inheritance.
     topics: [molecular-genetics]
     outcomes:
-      - {key: SYN201-CO1, statement: "Explain mechanisms of gene expression and regulation.", contributes: [[PLO1, reinforce]]}
+      - {key: SYN201-CO1, statement: "Explain mechanisms of gene expression and regulation.", contributes: [[PLO1, reinforce]], supported_by: [molecular-genetics]}
     assessments:
       - {key: SYN201-A1, title: Final examination, format: exam, weight: 50, week: 14, assesses: [SYN201-CO1]}
 
@@ -152,7 +158,10 @@ courses:
     description: Metabolic pathways, enzymes, and bioenergetics.
     topics: [biochemistry]
     outcomes:
-      - {key: SYN202-CO1, statement: "Describe regulation of core metabolic pathways.", contributes: [[PLO1, reinforce]]}
+      - {key: SYN202-CO1, statement: "Describe regulation of core metabolic pathways.", contributes: [[PLO1, reinforce]], supported_by: [biochemistry]}
+      - {key: SYN202-CO2, statement: "Interpret enzyme kinetics data.", supported_by: [biochemistry]}
+    assessments:
+      - {key: SYN202-A1, title: Enzyme kinetics problem set, format: assignment, weight: 25, week: 6, hours: 5, assesses: [SYN202-CO1, SYN202-CO2]}
 
   - code: SYN 210
     title: Research Methods and Experimental Design
@@ -164,7 +173,7 @@ courses:
     description: Principles of experimental design, controls, sampling, and analysis planning.
     topics: [experimental-design]
     outcomes:
-      - {key: SYN210-CO1, statement: "Design a controlled experiment addressing a biomedical question.", contributes: [[PLO3, introduce]]}
+      - {key: SYN210-CO1, statement: "Design a controlled experiment addressing a biomedical question.", contributes: [[PLO3, introduce]], supported_by: [experimental-design]}
       - {key: SYN210-CO2, statement: "Apply regression models to experimental data.", contributes: [[PLO2, reinforce]]}
     assessments:
       - {key: SYN210-A1, title: Experimental design proposal, format: written assignment, weight: 40, week: 8, assesses: [SYN210-CO1]}
@@ -180,7 +189,7 @@ courses:
     description: Linear and logistic regression, study power, and analysis of health data.
     topics: [stats-regression]
     outcomes:
-      - {key: SYN211-CO1, statement: "Fit and interpret regression models for health data.", contributes: [[PLO2, reinforce]]}
+      - {key: SYN211-CO1, statement: "Fit and interpret regression models for health data.", contributes: [[PLO2, reinforce]], supported_by: [stats-regression]}
 
   - code: SYN 212
     title: Data Analysis with R
@@ -192,7 +201,7 @@ courses:
     description: Data wrangling, visualization, and regression in the R environment.
     topics: [stats-regression]
     outcomes:
-      - {key: SYN212-CO1, statement: "Use R to fit regression models and visualize results.", contributes: [[PLO2, reinforce]]}
+      - {key: SYN212-CO1, statement: "Use R to fit regression models and visualize results.", contributes: [[PLO2, reinforce]], supported_by: [stats-regression]}
 
   - code: SYN 220
     title: Immunology
@@ -204,7 +213,9 @@ courses:
     description: Innate and adaptive immunity and immune dysfunction.
     topics: [immunology]
     outcomes:
-      - {key: SYN220-CO1, statement: "Explain innate and adaptive immune responses.", contributes: [[PLO1, reinforce]]}
+      - {key: SYN220-CO1, statement: "Explain innate and adaptive immune responses.", contributes: [[PLO1, reinforce]], supported_by: [immunology]}
+    assessments:
+      - {key: SYN220-A1, title: Tutorial participation, format: participation, weight: 10, week: null, assesses: []}
 
   - code: SYN 230
     title: Laboratory Techniques
@@ -217,7 +228,9 @@ courses:
     description: Core wet-laboratory techniques, safety, and data recording.
     topics: [lab-techniques]
     outcomes:
-      - {key: SYN230-CO1, statement: "Perform core laboratory techniques safely and reproducibly.", contributes: [[PLO3, reinforce]]}
+      - {key: SYN230-CO1, statement: "Perform core laboratory techniques safely and reproducibly.", contributes: [[PLO3, reinforce]], supported_by: [lab-techniques]}
+    assessments:
+      - {key: SYN230-A1, title: Laboratory notebook, format: lab report, weight: 40, week: 10, hours: 12, assesses: [SYN230-CO1]}
 
   - code: SYN 231
     title: Laboratory Practicum
@@ -229,7 +242,7 @@ courses:
     description: Supervised practicum accompanying Laboratory Techniques.
     topics: [lab-techniques]
     outcomes:
-      - {key: SYN231-CO1, statement: "Record and report laboratory data accurately.", contributes: [[PLO3, reinforce]]}
+      - {key: SYN231-CO1, statement: "Record and report laboratory data accurately.", contributes: [[PLO3, reinforce]], supported_by: [lab-techniques]}
 
   - code: SYN 301
     title: Pharmacology
@@ -241,7 +254,7 @@ courses:
     description: Pharmacokinetics, pharmacodynamics, and drug classes.
     topics: [pharmacology]
     outcomes:
-      - {key: SYN301-CO1, statement: "Relate drug mechanisms to physiological targets.", contributes: [[PLO1, assess]]}
+      - {key: SYN301-CO1, statement: "Relate drug mechanisms to physiological targets.", contributes: [[PLO1, assess]], supported_by: [pharmacology]}
 
   - code: SYN 310
     title: Critical Appraisal of Biomedical Literature
@@ -253,8 +266,8 @@ courses:
     description: Reading, evaluating, and synthesizing primary research articles.
     topics: [literature-appraisal, scientific-writing]
     outcomes:
-      - {key: SYN310-CO1, statement: "Evaluate the validity of a primary research article.", contributes: [[PLO5, introduce]]}
-      - {key: SYN310-CO2, statement: "Write a structured critical review.", contributes: [[PLO4, reinforce]]}
+      - {key: SYN310-CO1, statement: "Evaluate the validity of a primary research article.", contributes: [[PLO5, introduce], [PLO10, reinforce, 0.8]], supported_by: [literature-appraisal]}
+      - {key: SYN310-CO2, statement: "Write a structured critical review.", contributes: [[PLO4, reinforce]], supported_by: [scientific-writing]}
     assessments:
       - {key: SYN310-A1, title: Critical review paper, format: written assignment, weight: 40, week: 10, assesses: [SYN310-CO1, SYN310-CO2]}
 
@@ -279,7 +292,7 @@ courses:
     description: Research ethics, integrity, consent, and professional conduct.
     topics: [research-ethics]
     outcomes:
-      - {key: SYN320-CO1, statement: "Analyse ethical issues in biomedical research scenarios.", contributes: [[PLO6, introduce]]}
+      - {key: SYN320-CO1, statement: "Analyse ethical issues in biomedical research scenarios.", contributes: [[PLO6, introduce]], supported_by: [research-ethics]}
 
   - code: SYN 330
     title: Advanced Experimental Design
@@ -291,7 +304,7 @@ courses:
     description: Factorial designs, power analysis, and pre-registration.
     topics: [experimental-design, stats-regression]
     outcomes:
-      - {key: SYN330-CO1, statement: "Design a powered, pre-registered experiment.", contributes: [[PLO3, assess], [PLO2, assess]]}
+      - {key: SYN330-CO1, statement: "Design a powered, pre-registered experiment.", contributes: [[PLO3, assess], [PLO2, assess]], supported_by: [experimental-design, stats-regression]}
     assessments:
       - {key: SYN330-A1, title: Pre-registration protocol, format: written assignment, weight: 50, week: 12, assesses: [SYN330-CO1]}
 
@@ -304,9 +317,11 @@ courses:
     description: Multidisciplinary team project addressing a health-science problem.
     topics: [teamwork]
     outcomes:
-      - {key: SYN340-CO1, statement: "Contribute effectively to a multidisciplinary project team.", contributes: [[PLO7, introduce]]}
+      - {key: SYN340-CO1, statement: "Contribute effectively to a multidisciplinary project team.", contributes: [[PLO7, introduce, 0.6]], supported_by: [teamwork]}
+      - {key: SYN340-CO2, statement: "Present team findings orally to a mixed audience.", contributes: [[PLO9, reinforce]], supported_by: [teamwork]}
     assessments:
-      - {key: SYN340-A1, title: Team project report, format: group project, weight: 60, week: 13, assesses: [SYN340-CO1]}
+      - {key: SYN340-A1, title: Team project report, format: group project, weight: 60, week: 13, hours: 30, assesses: [SYN340-CO1]}
+      - {key: SYN340-A2, title: Team poster presentation, format: poster, weight: 20, week: 14, hours: 8, assesses: [SYN340-CO2]}
 
   - code: SYN 350
     title: Special Topics in Biomedical Sciences
@@ -330,7 +345,7 @@ courses:
     description: Supervised independent research project, part one.
     topics: [experimental-design]
     outcomes:
-      - {key: SYN401-CO1, statement: "Execute a supervised research plan.", contributes: [[PLO8, reinforce], [PLO3, assess]]}
+      - {key: SYN401-CO1, statement: "Execute a supervised research plan.", contributes: [[PLO8, reinforce], [PLO3, assess]], supported_by: [experimental-design]}
 
   - code: SYN 402
     title: Honours Research Project II
@@ -357,8 +372,8 @@ courses:
     description: Student-led seminars integrating molecular, physiological, and pharmacological perspectives on a current biomedical problem.
     topics: [literature-appraisal, pharmacology]
     outcomes:
-      - {key: SYN407-CO1, statement: "Synthesize evidence across biomedical subdisciplines to explain a current problem.", contributes: [[PLO1, assess], [PLO5, assess]]}
-      - {key: SYN407-CO2, statement: "Present an integrative seminar to a scientific audience.", contributes: [[PLO4, assess]]}
+      - {key: SYN407-CO1, statement: "Synthesize evidence across biomedical subdisciplines to explain a current problem.", contributes: [[PLO1, assess], [PLO5, assess], [PLO10, assess]], supported_by: [literature-appraisal, pharmacology]}
+      - {key: SYN407-CO2, statement: "Present an integrative seminar to a scientific audience.", contributes: [[PLO4, assess], [PLO9, assess]]}
     assessments:
       - {key: SYN407-A1, title: Seminar presentation, format: oral presentation, weight: 40, week: 6, assesses: [SYN407-CO2]}
       - {key: SYN407-A2, title: Literature synthesis paper, format: written assignment, weight: 40, week: 12, assesses: [SYN407-CO1]}
@@ -373,7 +388,7 @@ courses:
     description: Immunomodulatory therapies and their mechanisms.
     topics: [immunology, pharmacology]
     outcomes:
-      - {key: SYN410-CO1, statement: "Evaluate immunomodulatory therapeutic strategies.", contributes: [[PLO1, assess]]}
+      - {key: SYN410-CO1, statement: "Evaluate immunomodulatory therapeutic strategies.", contributes: [[PLO1, assess]], supported_by: [immunology, pharmacology]}
 
   - code: SYN 420
     title: Capstone Communication Portfolio
@@ -384,7 +399,7 @@ courses:
     description: Portfolio of scientific communication for varied audiences, including an introduction to scientific writing conventions for lay audiences.
     topics: [scientific-writing]
     outcomes:
-      - {key: SYN420-CO1, statement: "Communicate research to specialist and lay audiences.", contributes: [[PLO4, assess]]}
+      - {key: SYN420-CO1, statement: "Communicate research to specialist and lay audiences.", contributes: [[PLO4, assess]], supported_by: [scientific-writing]}
     assessments:
       - {key: SYN420-A1, title: Communication portfolio, format: portfolio, weight: 100, week: 14, assesses: [SYN420-CO1]}
 
@@ -408,6 +423,48 @@ topic_preparation:
      evidence: "Seminar preparation assumes students can appraise primary literature"}
   - {from: research-ethics, to: SYN401-CO1, basis: interpretation, review: proposed,
      rationale: "Independent projects involve ethics approval; no document states this dependency."}
+
+# Outcome-level preparation (horizontal alignment): an earlier course outcome or assessment prepares students for
+# a later course outcome. `strength` is an asserted 0–1 value; `review: proposed` links render as dashed proposals.
+outcome_preparation:
+  - {from: SYN101-CO1, to: SYN130-CO1, basis: explicit_statement, review: accepted, strength: 0.8,
+     rationale: "Organelle function underpins organ-system homeostasis."}
+  - {from: SYN101-CO1, to: SYN201-CO1, basis: explicit_statement, review: accepted, strength: 0.7,
+     rationale: "Gene expression builds on cellular structure."}
+  - {from: SYN102-CO1, to: SYN202-CO1, basis: explicit_statement, review: accepted, strength: 0.9,
+     rationale: "Metabolic regulation applies chemical equilibrium."}
+  - {from: SYN110-CO1, to: SYN210-CO2, basis: explicit_statement, review: accepted, strength: 0.9,
+     rationale: "Regression modelling extends inferential testing."}
+  - {from: SYN210-CO1, to: SYN230-CO1, basis: interpretation, review: accepted, strength: 0.7,
+     rationale: "Controlled designs frame the laboratory techniques practised."}
+  - {from: SYN210-CO1, to: SYN330-CO1, basis: explicit_statement, review: accepted, strength: 0.9,
+     rationale: "Advanced design extends controlled-experiment design."}
+  - {from: SYN120-CO1, to: SYN310-CO2, basis: explicit_statement, review: accepted, strength: 0.8,
+     rationale: "Critical reviews use the structured-summary conventions."}
+  - {from: SYN310-CO1, to: SYN407-CO1, basis: interpretation, review: accepted, strength: 0.6,
+     rationale: "Seminar synthesis depends on appraising primary articles."}
+  - {from: SYN330-CO1, to: SYN401-CO1, basis: explicit_statement, review: accepted, strength: 0.9,
+     rationale: "The honours plan executes a pre-registered design."}
+  - {from: SYN401-CO1, to: SYN402-CO1, basis: explicit_statement, review: accepted, strength: 1.0,
+     rationale: "The thesis reports the executed research plan."}
+  - {from: SYN120-CO2, to: SYN407-CO2, basis: interpretation, review: accepted, strength: 0.5,
+     rationale: "Seminar delivery builds on first-year oral presentation."}
+  - {from: SYN130-CO1, to: SYN301-CO1, basis: interpretation, review: proposed, strength: 0.7,
+     rationale: "Drug targets are physiological systems introduced in SYN 130."}
+  - {from: SYN202-CO1, to: SYN301-CO1, basis: interpretation, review: proposed, strength: 0.6,
+     rationale: "Drug metabolism relies on metabolic-pathway knowledge."}
+  - {from: SYN201-CO1, to: SYN220-CO1, basis: interpretation, review: proposed, strength: 0.4,
+     rationale: "Antibody diversity draws on gene regulation, but only lightly."}
+  - {from: SYN220-CO1, to: SYN410-CO1, basis: interpretation, review: proposed, strength: 0.8,
+     rationale: "Immunomodulatory therapies presuppose immune-response mechanisms."}
+  - {from: SYN340-CO1, to: SYN401-CO1, basis: interpretation, review: proposed, strength: 0.3,
+     rationale: "Team project experience may transfer to supervised research."}
+  - {from: SYN210-A2, to: SYN330-CO1, basis: interpretation, review: accepted, strength: 0.7,
+     rationale: "The regression report rehearses the power analysis needed for pre-registration."}
+  - {from: SYN120-A1, to: SYN310-CO2, basis: explicit_statement, review: accepted, strength: 0.6,
+     rationale: "The research summary is the model for the critical review."}
+  - {from: SYN310-A1, to: SYN407-CO1, basis: interpretation, review: proposed, strength: 0.5,
+     rationale: "The critical review paper practises the synthesis assessed in the seminar."}
 
 # Pedagogical preparation between courses (not formal requisites).
 inferred_preparation:

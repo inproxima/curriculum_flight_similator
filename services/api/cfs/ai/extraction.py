@@ -29,8 +29,8 @@ from cfs.ingest.text import find_span, normalize
 from cfs.models import CurriculumSource, DocumentPage, DocumentVersion, Job
 from cfs.models.enums import ReviewItemKind
 
-EXTRACT_PROMPT_VERSION = "extract-doc-v1"
-EXTRACT_SCHEMA_VERSION = "extract-schema-v1"
+EXTRACT_PROMPT_VERSION = "extract-doc-v2"
+EXTRACT_SCHEMA_VERSION = "extract-schema-v2"
 MAPPING_PROMPT_VERSION = "map-plo-v1"
 
 NULLABLE_STR = {"type": ["string", "null"]}
@@ -130,6 +130,58 @@ EXTRACT_SCHEMA = _obj(
                 }
             ),
         },
+        "course_details": {
+            "type": "array",
+            "items": _obj(
+                {
+                    "code": {"type": "string"},
+                    "title": NULLABLE_STR,
+                    "code_quote": {"type": "string"},
+                    "page": {"type": "integer"},
+                    "credits": {"type": ["number", "null"]},
+                    "credits_quote": NULLABLE_STR,
+                    "description_quote": NULLABLE_STR,
+                }
+            ),
+        },
+        "course_outcomes": {
+            "type": "array",
+            "items": _obj(
+                {
+                    "course_code": {"type": "string"},
+                    "number": NULLABLE_INT,
+                    "statement": {"type": "string"},
+                    "quote": {"type": "string"},
+                    "page": {"type": "integer"},
+                }
+            ),
+        },
+        "assessments": {
+            "type": "array",
+            "items": _obj(
+                {
+                    "course_code": {"type": "string"},
+                    "name": {"type": "string"},
+                    "format": NULLABLE_STR,
+                    "weight_percent": {"type": ["number", "null"]},
+                    "timing_text": NULLABLE_STR,
+                    "timing_week": NULLABLE_INT,
+                    "quote": {"type": "string"},
+                    "page": {"type": "integer"},
+                }
+            ),
+        },
+        "topics": {
+            "type": "array",
+            "items": _obj(
+                {
+                    "course_code": {"type": "string"},
+                    "name": {"type": "string"},
+                    "quote": {"type": "string"},
+                    "page": {"type": "integer"},
+                }
+            ),
+        },
         "notes": {"type": "array", "items": {"type": "string"}},
     }
 )
@@ -156,6 +208,17 @@ Rules:
 - preparation_statements: sentences saying a course builds on / assumes earlier learning (not formal rules).
   candidate_source_codes may list course codes that the described earlier learning plausibly refers to ONLY if
   those codes appear in this document; otherwise leave it empty.
+- course_details: for a COURSE OUTLINE or calendar entry describing a specific course: its code, title as written
+  next to the code, credits/units only when stated (quote them), and the course/calendar description verbatim.
+  Do not repeat a course here merely because it is listed in program requirements.
+- course_outcomes: course-level learning outcomes/objectives of that course, one per item, `statement` copied
+  verbatim (it must appear inside `quote`), `number` as numbered in the document or null.
+- assessments: graded components of that course (e.g. "Midterm Exam 1"). `name` as written; `format` a short
+  word such as exam, quiz, assignment, lab, report, presentation, participation, project; `weight_percent` only
+  when the percentage is stated in the quote; `timing_text` exactly as written (a date or "Week 6"), and
+  `timing_week` only when a week number is stated. The quote must contain the name and the weight.
+- topics: major topics/units in the course schedule or content list, `name` copied verbatim from the quote.
+  Keep to headline topics (typically 5-20 per course), not every sub-bullet.
 - notes: ambiguities a human reviewer should know about (e.g. unlabelled columns, conflicting statements)."""
 
 
@@ -344,7 +407,18 @@ def validate_extraction(out: dict[str, Any], pages: dict[int, str]) -> tuple[lis
             }
         )
 
-    for k in ("course", "option_group", "program_outcome", "requisite", "preparation"):
+    _validate_course_content(out, pages, cands, drop)
+
+    for k in (
+        "course",
+        "option_group",
+        "program_outcome",
+        "requisite",
+        "preparation",
+        "outcome",
+        "assessment",
+        "topic",
+    ):
         report["accepted"][k] = sum(1 for c in cands if c["kind"] == k)
     doc = out.get("document") or {}
     if doc.get("evidence_quote") and (loc := _locate(pages, doc.get("page"), doc["evidence_quote"])):
@@ -352,6 +426,163 @@ def validate_extraction(out: dict[str, Any], pages: dict[int, str]) -> tuple[lis
     else:
         report["document"] = {**doc, "evidence_quote": None, "unverified": True}
     return cands, report
+
+
+def _key_code(code: str) -> str:
+    return normalize_code(code).replace(" ", "")
+
+
+def _in(needle: str | None, hay: str) -> bool:
+    return bool(needle) and normalize(needle).lower() in normalize(hay).lower()
+
+
+def _words_in(name: str | None, hay: str) -> bool:
+    """Every word of the name appears in the quote (table cells wrap, so order and adjacency are not required)."""
+    words = re.findall(r"[a-z]{3,}", normalize(name or "").lower())
+    text = set(re.findall(r"[a-z]{3,}", normalize(hay).lower()))
+    return bool(words) and all(w in text for w in words)
+
+
+def _validate_course_content(out: dict[str, Any], pages: dict[int, str], cands: list[dict], drop) -> None:
+    """Course-outline content: details of a described course, its outcomes, assessments, and topics.
+
+    Outcome keys follow the deterministic extractor's convention (MATH249-CO1); assessments and topics use a slug
+    of the name scoped to the course (MATH249-A-midterm-exam, MATH249-T-limits-and-continuity)."""
+
+    def course_ok(code: str) -> str | None:
+        c = normalize_code(code)
+        return c if re.fullmatch(r"[A-Z]{2,5} \d{3}[A-Z]?", c) else None
+
+    for c in out.get("course_details", []):
+        code = course_ok(c.get("code", ""))
+        loc = _locate(pages, c.get("page"), c.get("code_quote"))
+        if not code or not loc:
+            drop("course_details", c, "not a course code or code_quote not found")
+            continue
+        pg, s, e = loc
+        quote = pages[pg][s:e]
+        if not _code_in(code, quote):
+            drop("course_details", c, "course code does not appear in its quote")
+            continue
+        fields: dict[str, Any] = {}
+        if c.get("credits") is not None and (cr := _locate(pages, pg, c.get("credits_quote"))):
+            cq = pages[cr[0]][cr[1] : cr[2]]
+            if f"{float(c['credits']):g}" in cq and re.search(r"unit|credit", cq, re.I):
+                fields["credits"] = {"value": float(c["credits"]), "page": cr[0], "quote": cq}
+        if d := _locate(pages, pg, c.get("description_quote")):
+            dq = pages[d[0]][d[1] : d[2]]
+            if len(normalize(dq)) >= 40:
+                fields["description"] = {"value": normalize(dq), "page": d[0], "quote": dq}
+        title = (c.get("title") or "").strip()
+        if not _in(title, quote):
+            title = ""
+        cands.append(
+            {
+                "kind": "course",
+                "code": code,
+                "title": title or code,
+                "page": pg,
+                "quote": quote,
+                "fields": fields,
+                "origin": "model",
+                "detail_only": True,
+            }
+        )
+
+    seen: set[str] = set()
+    counters: dict[str, int] = {}
+    for o in out.get("course_outcomes", []):
+        code = course_ok(o.get("course_code", ""))
+        loc = _locate(pages, o.get("page"), o.get("quote"))
+        if not code or not loc:
+            drop("course_outcome", o, "not a course code or quote not found")
+            continue
+        pg, s, e = loc
+        quote = pages[pg][s:e]
+        if not _in(o.get("statement"), quote):
+            drop("course_outcome", o, "statement is not verbatim in its quote")
+            continue
+        # Numbered in document order: outlines often restart numbering per module or stream.
+        if normalize(o["statement"]).lower() in seen:
+            continue
+        seen.add(normalize(o["statement"]).lower())
+        counters[code] = counters.get(code, 0) + 1
+        key = f"{_key_code(code)}-CO{counters[code]}"
+        cands.append(
+            {
+                "kind": "outcome",
+                "course": code,
+                "key": key,
+                "statement": normalize(o["statement"]),
+                "contributes": [],
+                "page": pg,
+                "quote": quote,
+                "origin": "model",
+            }
+        )
+
+    counters.clear()
+    for a in out.get("assessments", []):
+        code = course_ok(a.get("course_code", ""))
+        loc = _locate(pages, a.get("page"), a.get("quote"))
+        if not code or not loc:
+            drop("assessment", a, "not a course code or quote not found")
+            continue
+        pg, s, e = loc
+        quote = pages[pg][s:e]
+        if not _words_in(a.get("name"), quote):
+            drop("assessment", a, "name is not in its quote")
+            continue
+        weight = a.get("weight_percent")
+        if weight is not None and not re.search(rf"(?<![\d.]){float(weight):g}(?:\.0+)?\s*%", quote):
+            weight = None
+        timing_text = a.get("timing_text") if _in(a.get("timing_text"), quote) else None
+        week = a.get("timing_week")
+        if week is not None and not re.search(rf"\bweeks?\s*{int(week)}\b", quote, re.I):
+            week = None
+        slug = re.sub(r"[^a-z0-9]+", "-", normalize(a["name"]).lower()).strip("-")[:80]
+        key = f"{_key_code(code)}-A-{slug}"
+        counters[key] = counters.get(key, 0) + 1
+        if counters[key] > 1:
+            key = f"{key}-{counters[key]}"
+        cands.append(
+            {
+                "kind": "assessment",
+                "course": code,
+                "key": key,
+                "title": normalize(a["name"]),
+                "format": (a.get("format") or "").strip().lower() or None,
+                "weight": float(weight) if weight is not None else None,
+                "week": int(week) if week is not None else None,
+                "timing_text": normalize(timing_text) if timing_text else None,
+                "assesses": [],
+                "page": pg,
+                "quote": quote,
+                "origin": "model",
+            }
+        )
+
+    seen.clear()
+    for t in out.get("topics", []):
+        code = course_ok(t.get("course_code", ""))
+        loc = _locate(pages, t.get("page"), t.get("quote"))
+        if not code or not loc:
+            drop("topic", t, "not a course code or quote not found")
+            continue
+        pg, s, e = loc
+        quote = pages[pg][s:e]
+        if not _in(t.get("name"), quote):
+            drop("topic", t, "name is not in its quote")
+            continue
+        name = normalize(t["name"]).strip(" .;:-")
+        slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:80]
+        key = f"{_key_code(code)}-T-{slug}"
+        if not slug or key in seen:
+            continue
+        seen.add(key)
+        cands.append(
+            {"kind": "topic", "course": code, "key": key, "title": name, "page": pg, "quote": quote, "origin": "model"}
+        )
 
 
 def run_extraction(

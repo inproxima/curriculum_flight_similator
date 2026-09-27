@@ -22,7 +22,9 @@ LEVEL_ORDER = {"introduce": 0, "reinforce": 1, "assess": 2}
 
 
 def _documented(r: dict[str, Any]) -> bool:
-    return r["basis"] == "explicit_statement" and r["review_state"] == "accepted"
+    """Documented in an assigned source. In a scenario projection, the planner's own edits count as the planned
+    design (they are marked `scenario` and shown as scenario changes, never as source statements)."""
+    return (r["basis"] == "explicit_statement" and r["review_state"] == "accepted") or bool(r.get("scenario"))
 
 
 def _active(r: dict[str, Any]) -> bool:

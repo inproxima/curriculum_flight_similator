@@ -114,9 +114,19 @@ export function useAnalysis(runId: string | null) {
   });
 }
 
-function invalidateScenario(qc: ReturnType<typeof useQueryClient>) {
-  for (const k of ["scenario", "scenarios", "scenario-changes", "analyses", "graph", "entity", "prior", "downstream", "compare"])
+export function invalidateScenario(qc: ReturnType<typeof useQueryClient>) {
+  for (const k of ["scenario", "scenarios", "scenario-changes", "analyses", "graph", "web", "entity", "prior", "downstream", "compare"])
     qc.invalidateQueries({ queryKey: [k] });
+}
+
+/** Apply a change to any scenario (including one created moments ago) and refresh every scenario-derived view. */
+export function useApplyChange() {
+  const qc = useQueryClient();
+  return async (scenarioId: string, revision: number, change: Record<string, unknown>) => {
+    const s = await send<Scenario>(`${V1}/scenarios/${scenarioId}/changes`, "POST", change, revision);
+    invalidateScenario(qc);
+    return s;
+  };
 }
 
 async function send<T>(url: string, method: string, body?: unknown, revision?: number): Promise<T> {

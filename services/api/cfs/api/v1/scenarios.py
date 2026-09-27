@@ -13,12 +13,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cfs.api.v1.catalog import MEANINGS, _course_unknowns
+from cfs.api.v1.schemas_web import WebView
 from cfs.core.auth import Principal, get_principal
 from cfs.core.db import get_db
 from cfs.core.errors import NotFound
 from cfs.core.scope import get_scoped
 from cfs.graph import queries
 from cfs.graph.view import build_view
+from cfs.graph.web import build_web
 from cfs.models import AnalysisRun, CurriculumVersion, EntityFieldEvidence, Scenario
 from cfs.scenarios import service
 from cfs.scenarios.report import build_markdown, to_html
@@ -174,6 +176,33 @@ def scenario_graph(
     )
     view["scenario"] = {"id": str(s.id), "title": s.title, "revision": s.revision}
     view["scenario_revision"] = s.revision
+    view["change_errors"] = [r for r in results if not r["ok"]]
+    return view
+
+
+@router.get("/scenarios/{sid}/web", response_model=WebView)
+def scenario_web(
+    sid: uuid.UUID,
+    detail: Literal["auto", "full", "overview"] = "auto",
+    focus: str | None = None,
+    pathway: str | None = None,
+    compare: bool = True,
+    db: Session = Depends(get_db),
+    p: Principal = Depends(get_principal),
+) -> dict[str, Any]:
+    """The Alignment Web projected through the scenario, with added / removed / strengthened / weakened status
+    against the baseline and the baseline scorecard for before/after comparison."""
+    s = _get(db, p, sid)
+    base, proj, results, d = service.projection(db, s)
+    view = build_web(
+        proj,
+        detail=detail,
+        focus=focus,
+        pathway=pathway,
+        diff=d if compare else None,
+        base=base if compare else None,
+    )
+    view["scenario"] = {"id": str(s.id), "title": s.title, "revision": s.revision}
     view["change_errors"] = [r for r in results if not r["ok"]]
     return view
 

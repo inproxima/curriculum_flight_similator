@@ -29,9 +29,10 @@ Requirements: Docker Desktop. On macOS, the repository folder must be shared wit
 File sharing) if it lives on an external volume.
 
 ```bash
-make up              # builds and starts db, redis, api, worker, web
-make seed-synthetic  # loads the SYNTHETIC fixture (idempotent)
+./run.sh             # checks Docker and ports, starts everything, seeds if empty, opens the app
 ```
+Other commands: `./run.sh stop | restart | status | logs | seed | test | e2e | reset` (`./run.sh help`).
+The same steps are available as `make up` and `make seed-synthetic`.
 - Web: http://localhost:5173
 - API docs: http://localhost:8010/docs
 
@@ -62,13 +63,39 @@ Set `CFS_TASK_ALWAYS_EAGER=true` to run jobs inline without a worker.
    exploratory). Nothing is merged implicitly.
 3. **Review inbox**: accept, edit, reject, or defer new courses, requisites, outcomes, conflicts (both sides kept),
    inferred mappings, duplicates, and missing metadata. Accepting changes draft versions only.
-4. **Map**: year/term lanes, layers, expand courses (**+**), select nodes or edges, open evidence (📄) at the source
-   page. The **Expected preparation** and **Future use** tabs highlight paths.
-5. **Assistant** (map view, **Assistant** button): Explore, Investigate, or Simulate. Answers cite verified source
-   passages, can highlight the map, and may include proposal cards (**Apply to scenario**, **Request critique**).
-6. **Outcomes**: course × program-outcome matrix with a defined denominator, assessment alignment, potential issues.
-7. **Scenarios**: create a scenario, edit from a course's **Scenario edit** tab (preview → apply), undo/redo, run the
-   deterministic analysis, compare, rebase, export, or publish as a new version (editor role).
+4. **Web** (home): the whole program as one connected web. Program outcomes sit on top. Each course is a column
+   (ordered by year and term) holding its learning outcomes, assessments and assignments, and topics.
+   - **Links:**
+     - *Vertical*: topic → outcome, assessment → outcome, outcome → program outcome.
+     - *Horizontal*: an outcome or assessment → a later course's outcome.
+   - **Strength:** every link is rated strong, moderate, or weak (`trust × intensity × support`, ADR 0003).
+     Strength is shown by line width. The source of a link is shown by line style: solid means documented,
+     long dash an accepted interpretation, short dash a proposal (**AI?**). Nothing relies on colour alone.
+   - **Selecting a program outcome** (e.g. *Collaboration*) shows its thread: where it is introduced,
+     reinforced, and assessed, and which stages are missing.
+   - **Selecting a course** shows its outcomes ↕ program outcomes, its assessments (format, weight, week,
+     hours), and the courses before and after it with the strength of each bridge.
+   - **Selecting a link** explains its strength.
+   - The **Layers** sidebar filters elements, link kinds, strength, link source, gaps, years, and "only what the
+     scenario changed".
+   - **Propose missing links (AI)** (draft versions) adds dashed proposals. Accept, edit, or reject them inline
+     or from the proposed-links queue.
+5. **Change → Simulate**:
+   - Ask *"What would you like to change?"* in the bar under the web. The assistant drafts changes you apply
+     with one click.
+   - Or use **Change this…** in the inspector to change an outcome, assignment, topic, program outcome, course,
+     or a link's strength directly. The first change creates a scenario; the baseline never changes.
+   - **Simulate** runs the deterministic analysis and opens four views:
+     - **What changed**: colour plus glyph (+ − ▲ ▼ ✕); unaffected elements fade.
+     - **Ripple**: replay the change step by step (assignment → outcome → program outcome → later courses).
+     - **Before / after**: side by side, with a scorecard delta.
+     - **Impact list**: ranked, with **Show me**.
+6. **Sequence**: the year/term lane map of courses and prerequisites. Expand courses (**+**), open evidence (📄) at
+   the source page, and use the **Expected preparation** and **Future use** tabs.
+   **Assistant** (top bar): Explore, Investigate, or Simulate. Answers cite verified source passages.
+7. **Outcomes**: course × program-outcome matrix with a defined denominator, assessment alignment, potential issues.
+   **Scenarios**: list, undo/redo, run the deterministic analysis, compare, rebase, export, or publish as a new
+   version (editor role).
 8. **Table**: keyboard-accessible alternative to the map, plus documented option rules.
 
 ## API keys and external AI

@@ -18,6 +18,9 @@ from cfs.graph.snapshot import Snapshot
 
 TermT = Literal["fall", "winter", "spring", "summer", "full_year", "unknown"]
 LevelT = Literal["introduce", "reinforce", "assess"]
+Strength = Annotated[float, Field(ge=0, le=1)]
+# (program outcome id, level) or (program outcome id, level, asserted strength 0–1)
+Contribution = Union[tuple[str, LevelT], tuple[str, LevelT, Strength]]
 
 
 class OpBase(BaseModel):
@@ -59,7 +62,8 @@ class AddOutcome(OpBase):
     op: Literal["add_outcome"] = "add_outcome"
     course_id: str
     statement: str
-    contributes: list[tuple[str, LevelT]] = Field(default_factory=list)  # (program outcome id, level)
+    contributes: list[Contribution] = Field(default_factory=list)
+    supported_by: list[str] = Field(default_factory=list)  # topic ids that teach toward this outcome
 
 
 class RemoveOutcome(OpBase):
@@ -71,7 +75,7 @@ class ModifyOutcome(OpBase):
     op: Literal["modify_outcome"] = "modify_outcome"
     entity_id: str
     statement: str | None = None
-    contributes: list[tuple[str, LevelT]] | None = None
+    contributes: list[Contribution] | None = None
 
 
 class AddTopic(OpBase):
@@ -97,6 +101,53 @@ class ChangeAssessment(OpBase):
     weight_percent: float | None = None
     format: str | None = None
     shift_weeks: int | None = None  # relative move ("two weeks later" = 2)
+    title: str | None = None
+    description: str | None = None
+    documented_hours: float | None = None
+    assesses: list[str] | None = None  # replaces the set of course outcomes this assessment assesses
+
+
+class ModifyTopic(OpBase):
+    op: Literal["modify_topic"] = "modify_topic"
+    entity_id: str
+    title: str | None = None
+    area: str | None = None
+    level: Literal["introductory", "intermediate", "advanced"] | None = None
+    supports: list[str] | None = None  # replaces the course outcomes this topic supports
+
+
+class AddProgramOutcome(OpBase):
+    op: Literal["add_program_outcome"] = "add_program_outcome"
+    label: str
+    statement: str
+    key: str | None = None
+
+
+class ModifyProgramOutcome(OpBase):
+    op: Literal["modify_program_outcome"] = "modify_program_outcome"
+    entity_id: str
+    label: str | None = None
+    statement: str | None = None
+
+
+class RemoveProgramOutcome(OpBase):
+    op: Literal["remove_program_outcome"] = "remove_program_outcome"
+    entity_id: str
+
+
+class ModifyCourse(OpBase):
+    op: Literal["modify_course"] = "modify_course"
+    entity_id: str
+    title: str | None = None
+    description: str | None = None
+    credits: float | None = None
+
+
+class SetRelationshipStrength(OpBase):
+    op: Literal["set_relationship_strength"] = "set_relationship_strength"
+    key: str
+    strength: Strength | None = None  # None clears the asserted strength (falls back to level / weight)
+    level: LevelT | None = None
 
 
 class AddAssessment(OpBase):
@@ -107,6 +158,8 @@ class AddAssessment(OpBase):
     weight_percent: float | None = None
     timing_week: int | None = None
     assesses: list[str] = Field(default_factory=list)
+    description: str | None = None
+    documented_hours: float | None = None
 
 
 class RemoveAssessment(OpBase):
@@ -144,10 +197,17 @@ class AddRelationship(OpBase):
     source: str
     target: str
     rel_type: Literal[
-        "inferred_preparation", "prepares_for", "possible_overlap", "contributes_to", "assesses", "covers_topic"
+        "inferred_preparation",
+        "prepares_for",
+        "possible_overlap",
+        "contributes_to",
+        "assesses",
+        "covers_topic",
+        "supports",
     ]
     level: LevelT | None = None
     rationale: str | None = None
+    strength: Strength | None = None
 
 
 class RemoveRelationship(OpBase):
@@ -174,6 +234,12 @@ Op = Annotated[
         ModifyRequirement,
         AddRelationship,
         RemoveRelationship,
+        ModifyTopic,
+        AddProgramOutcome,
+        ModifyProgramOutcome,
+        RemoveProgramOutcome,
+        ModifyCourse,
+        SetRelationshipStrength,
     ],
     Field(discriminator="op"),
 ]
@@ -212,6 +278,7 @@ def _rel(
     level: str | None = None,
     rationale: str | None = None,
     rule_id: str | None = None,
+    strength: float | None = None,
 ) -> None:
     if rtype == "possible_overlap" and source > target:
         source, target = target, source
@@ -227,6 +294,8 @@ def _rel(
         "level": level,
         "rule_id": rule_id,
         "rationale": rationale,
+        "strength": strength,
+        "strength_source": "scenario" if strength is not None else None,
         "scope": None,
         "is_synthetic": False,
         "evidence": {"supporting": 0, "contradicting": 0},
@@ -272,6 +341,23 @@ def _drop_entity(snap: Snapshot, eid: str) -> list[str]:
         if eid in g["members"]:
             g["members"] = [m for m in g["members"] if m != eid]
     return removed
+
+
+def _contribute(snap: Snapshot, key: str, outcome: str, c: tuple) -> None:
+    plo, lvl, *st = c
+    _need(snap, plo, "program_outcome")
+    _rel(snap, key, outcome, plo, "contributes_to", level=lvl, strength=st[0] if st else None)
+
+
+def _check_pair(snap: Snapshot, rtype: str, source: str, target: str) -> None:
+    from cfs.analysis.alignment import pair_allowed
+
+    if not pair_allowed(snap, rtype, source, target):
+        s, t = snap.entities[source], snap.entities[target]
+        raise OpError(
+            f"{rtype.replace('_', ' ')} cannot connect {s['type'].replace('_', ' ')} {s['key']} to "
+            f"{t['type'].replace('_', ' ')} {t['key']}"
+        )
 
 
 def _key(snap: Snapshot, eid: str) -> str:
@@ -412,9 +498,11 @@ def _apply(snap: Snapshot, op: Op, scenario_id: str, seq: int) -> dict[str, Any]
             {"scope": "course", "statement_verbatim": None, "label": o.statement[:300]},
         )
         _rel(snap, _new_id(scenario_id, seq, "has"), c["id"], eid, "has_outcome")
-        for plo, lvl in o.contributes:
-            _need(snap, plo, "program_outcome")
-            _rel(snap, _new_id(scenario_id, seq, f"plo:{plo}"), eid, plo, "contributes_to", level=lvl)
+        for con in o.contributes:
+            _contribute(snap, _new_id(scenario_id, seq, f"plo:{con[0]}"), eid, con)
+        for t in o.supported_by:
+            _need(snap, t, "topic")
+            _rel(snap, _new_id(scenario_id, seq, f"sup:{t}"), t, eid, "supports")
         return {
             "target": eid,
             "before": None,
@@ -447,13 +535,24 @@ def _apply(snap: Snapshot, op: Op, scenario_id: str, seq: int) -> dict[str, Any]
             e["details"] = {**e["details"], "label": o.statement[:300], "statement_modified_in_scenario": True}
             e["modified"] = True
         if o.contributes is not None:
-            for k in [
-                k for k, r in snap.relationships.items() if r["source"] == e["id"] and r["type"] == "contributes_to"
-            ]:
-                del snap.relationships[k]
-            for plo, lvl in o.contributes:
-                _need(snap, plo, "program_outcome")
-                _rel(snap, _new_id(scenario_id, seq, f"plo:{plo}"), e["id"], plo, "contributes_to", level=lvl)
+            # keep the identity of contributions that stay (so a level change reads as a modified link, not a
+            # removal plus an addition); drop the ones no longer wanted; add the new ones
+            wanted = {c[0]: c for c in o.contributes}
+            for k, r in list(snap.relationships.items()):
+                if r["source"] != e["id"] or r["type"] != "contributes_to":
+                    continue
+                if r["target"] not in wanted:
+                    del snap.relationships[k]
+                    continue
+                _plo, lvl, *st = wanted.pop(r["target"])
+                # an asserted strength belongs to the level it was asserted for: a new level without a new
+                # strength falls back to the level's own intensity
+                new_strength = st[0] if st else (r.get("strength") if lvl == r.get("level") else None)
+                if (r.get("level"), r.get("strength")) != (lvl, new_strength):
+                    r.update(level=lvl, strength=new_strength, basis="assumption", origin="manual", scenario=True)
+                    r["strength_source"] = "scenario" if new_strength is not None else None
+            for con in wanted.values():
+                _contribute(snap, _new_id(scenario_id, seq, f"plo:{con[0]}"), e["id"], con)
         return {
             "target": e["id"],
             "before": before,
@@ -510,7 +609,10 @@ def _apply(snap: Snapshot, op: Op, scenario_id: str, seq: int) -> dict[str, Any]
     if isinstance(o, ChangeAssessment):
         a = _need(snap, o.entity_id, "assessment")
         d = a["details"]
-        before = {k: d.get(k) for k in ("timing_week", "weight_percent", "format")}
+        fields = ("timing_week", "weight_percent", "format", "documented_hours")
+        before = {k: d.get(k) for k in fields}
+        before["title"] = a["title"]
+        before["assesses"] = _targets(snap, a["id"], "assesses")
         if o.shift_weeks is not None:
             if d.get("timing_week") is None:
                 raise OpError(f"{a['title']} has no documented week, so a relative move is ambiguous; set timing_week")
@@ -521,14 +623,32 @@ def _apply(snap: Snapshot, op: Op, scenario_id: str, seq: int) -> dict[str, Any]
             d["weight_percent"] = o.weight_percent
         if o.format is not None:
             d["format"] = o.format
+        if o.documented_hours is not None:
+            d["documented_hours"] = o.documented_hours
+        if o.title:
+            a["title"] = o.title
+        if o.description is not None:
+            a["description"] = o.description
+        if o.assesses is not None:
+            for k in [k for k, r in snap.relationships.items() if r["source"] == a["id"] and r["type"] == "assesses"]:
+                del snap.relationships[k]
+            for out in o.assesses:
+                _need(snap, out, "course_outcome")
+                _rel(snap, _new_id(scenario_id, seq, f"assesses:{out}"), a["id"], out, "assesses")
         a["modified"] = True
-        after = {k: d.get(k) for k in ("timing_week", "weight_percent", "format")}
+        after = {k: d.get(k) for k in fields}
+        after["title"] = a["title"]
+        after["assesses"] = _targets(snap, a["id"], "assesses") if o.assesses is not None else before["assesses"]
         return {
             "target": a["id"],
             "before": before,
             "after": after,
-            "summary": f"Change assessment {a['title']}: "
-            + ", ".join(f"{k} {before[k]}→{after[k]}" for k in after if before[k] != after[k]),
+            "summary": f"Change assessment {before['title']}: "
+            + ", ".join(
+                f"{k.replace('_', ' ')} {_fmt(snap, before[k])}→{_fmt(snap, after[k])}"
+                for k in after
+                if before[k] != after[k]
+            ),
         }
     if isinstance(o, AddAssessment):
         c = _need(snap, o.course_id, "course")
@@ -539,7 +659,14 @@ def _apply(snap: Snapshot, op: Op, scenario_id: str, seq: int) -> dict[str, Any]
             "assessment",
             f"{c['key'].replace(' ', '')}-A-new{seq}",
             o.title,
-            {"format": o.format, "weight_percent": o.weight_percent, "timing_week": o.timing_week},
+            {
+                "format": o.format,
+                "weight_percent": o.weight_percent,
+                "timing_week": o.timing_week,
+                "timing_text": f"week {o.timing_week}" if o.timing_week else None,
+                "documented_hours": o.documented_hours,
+            },
+            o.description,
         )
         _rel(snap, _new_id(scenario_id, seq, "has"), c["id"], eid, "has_assessment")
         for out in o.assesses:
@@ -596,6 +723,7 @@ def _apply(snap: Snapshot, op: Op, scenario_id: str, seq: int) -> dict[str, Any]
     if isinstance(o, AddRelationship):
         _need(snap, o.source)
         _need(snap, o.target)
+        _check_pair(snap, o.rel_type, o.source, o.target)
         key = _new_id(scenario_id, seq, "rel")
         _rel(
             snap,
@@ -606,6 +734,7 @@ def _apply(snap: Snapshot, op: Op, scenario_id: str, seq: int) -> dict[str, Any]
             level=o.level,
             rationale=o.rationale,
             basis="assumption" if o.rel_type != "inferred_preparation" else "interpretation",
+            strength=o.strength,
         )
         return {
             "target": o.target,
@@ -624,7 +753,121 @@ def _apply(snap: Snapshot, op: Op, scenario_id: str, seq: int) -> dict[str, Any]
             "after": None,
             "summary": f"Remove {r['type'].replace('_', ' ')}: {_key(snap, r['source'])} → {_key(snap, r['target'])}",
         }
+    if isinstance(o, ModifyTopic):
+        t = _need(snap, o.entity_id, "topic")
+        before = {"title": t["title"], **{k: t["details"].get(k) for k in ("area", "level")}}
+        before["supports"] = _targets(snap, t["id"], "supports")
+        if o.title:
+            t["title"] = o.title
+        if o.area is not None:
+            t["details"]["area"] = o.area
+        if o.level is not None:
+            t["details"]["level"] = o.level
+        if o.supports is not None:
+            for k in [k for k, r in snap.relationships.items() if r["source"] == t["id"] and r["type"] == "supports"]:
+                del snap.relationships[k]
+            for out in o.supports:
+                _need(snap, out, "course_outcome")
+                _rel(snap, _new_id(scenario_id, seq, f"sup:{out}"), t["id"], out, "supports")
+        after = {"title": t["title"], **{k: t["details"].get(k) for k in ("area", "level")}}
+        after["supports"] = _targets(snap, t["id"], "supports")
+        return {
+            "target": t["id"],
+            "before": before,
+            "after": after,
+            "summary": f"Modify topic '{before['title']}'"
+            + (f": now supports {len(after['supports'])} outcome(s)" if o.supports is not None else ""),
+        }
+    if isinstance(o, AddProgramOutcome):
+        n = 1 + sum(1 for e in snap.entities.values() if e["type"] == "program_outcome")
+        key = o.key or f"PLO{n}-new"
+        if snap.by_key("program_outcome", key):
+            raise OpError(f"program outcome {key} already exists")
+        eid = _new_id(scenario_id, seq, f"plo:{key}")
+        _entity(
+            snap,
+            eid,
+            "program_outcome",
+            key,
+            f"{key}: {o.label}",
+            {"scope": "program", "statement_verbatim": o.statement, "label": o.label},
+        )
+        return {
+            "target": eid,
+            "before": None,
+            "after": {"key": key, "label": o.label},
+            "summary": f"Add program outcome {key}: {o.label}",
+        }
+    if isinstance(o, ModifyProgramOutcome):
+        e = _need(snap, o.entity_id, "program_outcome")
+        before = {"label": e["details"].get("label"), "statement": e["details"].get("statement_verbatim")}
+        if o.label:
+            e["details"]["label"] = o.label
+            e["title"] = f"{e['key']}: {o.label}"
+        if o.statement:
+            e["details"]["statement_verbatim"] = o.statement
+        after = {"label": e["details"].get("label"), "statement": e["details"].get("statement_verbatim")}
+        return {"target": e["id"], "before": before, "after": after, "summary": f"Modify program outcome {e['key']}"}
+    if isinstance(o, RemoveProgramOutcome):
+        e = _need(snap, o.entity_id, "program_outcome")
+        n = sum(1 for r in snap.relationships.values() if e["id"] in (r["source"], r["target"]))
+        _drop_entity(snap, e["id"])
+        return {
+            "target": e["id"],
+            "before": {"key": e["key"], "title": e["title"], "links": n},
+            "after": None,
+            "summary": f"Remove program outcome {e['title']} and its {n} link(s)",
+        }
+    if isinstance(o, ModifyCourse):
+        c = _need(snap, o.entity_id, "course")
+        before = {"title": c["title"], "description": c["description"], "credits": c["details"].get("credits")}
+        if o.title:
+            c["title"] = o.title
+        if o.description is not None:
+            c["description"] = o.description
+        if o.credits is not None:
+            c["details"]["credits"] = o.credits
+        after = {"title": c["title"], "description": c["description"], "credits": c["details"].get("credits")}
+        changed = [k for k in after if after[k] != before[k]]
+        return {
+            "target": c["id"],
+            "before": before,
+            "after": after,
+            "summary": f"Modify course {c['key']}: {', '.join(changed) or 'no change'}",
+        }
+    if isinstance(o, SetRelationshipStrength):
+        r = snap.relationships.get(o.key)
+        if r is None:
+            raise OpError("relationship does not exist in this projection")
+        if r["type"] not in ("contributes_to", "assesses", "supports", "prepares_for"):
+            raise OpError(f"{r['type'].replace('_', ' ')} links carry no strength")
+        before = {"strength": r.get("strength"), "level": r.get("level")}
+        r["strength"] = o.strength
+        r["strength_source"] = "scenario" if o.strength is not None else None
+        if o.level is not None:
+            if r["type"] != "contributes_to":
+                raise OpError("only program-outcome contributions have a level")
+            r["level"] = o.level
+        after = {"strength": r["strength"], "level": r.get("level")}
+        return {
+            "target": r["target"],
+            "before": before,
+            "after": after,
+            "summary": f"Set strength of {_key(snap, r['source'])} → {_key(snap, r['target'])} "
+            f"to {o.strength if o.strength is not None else 'default'}" + (f" ({o.level})" if o.level else ""),
+        }
     raise OpError(f"unsupported operation {type(o).__name__}")
+
+
+def _targets(snap: Snapshot, source: str, rtype: str) -> list[str]:
+    # read relationships directly: cached indexes are stale while an operation is mutating the snapshot
+    return sorted(r["target"] for r in snap.relationships.values() if r["source"] == source and r["type"] == rtype)
+
+
+def _fmt(snap: Snapshot, v: Any) -> str:
+    if isinstance(v, list):
+        return "[" + ", ".join(_key(snap, x) for x in v) + "]"
+    return str(v)
 
 
 def project(base: Snapshot, changes: list[tuple[int, dict[str, Any]]], scenario_id: str) -> tuple[Snapshot, list[dict]]:
@@ -641,6 +884,13 @@ def project(base: Snapshot, changes: list[tuple[int, dict[str, Any]]], scenario_
     return snap, results
 
 
+REL_MATERIAL = ("type", "source", "target", "level", "strength", "review_state", "basis", "rationale")
+
+
+def _rel_material(r: dict[str, Any]) -> tuple:
+    return tuple(r.get(f) for f in REL_MATERIAL)
+
+
 def diff(base: Snapshot, proj: Snapshot) -> dict[str, dict[str, str]]:
     ents: dict[str, str] = {}
     for eid in base.entities.keys() - proj.entities.keys():
@@ -649,15 +899,20 @@ def diff(base: Snapshot, proj: Snapshot) -> dict[str, dict[str, str]]:
         ents[eid] = "added"
     for eid in proj.entities.keys() & base.entities.keys():
         b, p = base.entities[eid], proj.entities[eid]
-        if (b["title"], b["details"]) != (p["title"], p["details"]) or base.placements.get(eid) != proj.placements.get(
-            eid
-        ):
+        if (b["title"], b["description"], b["details"]) != (
+            p["title"],
+            p["description"],
+            p["details"],
+        ) or base.placements.get(eid) != proj.placements.get(eid):
             ents[eid] = "modified"
     rels: dict[str, str] = {}
     for k in base.relationships.keys() - proj.relationships.keys():
         rels[k] = "removed"
     for k in proj.relationships.keys() - base.relationships.keys():
         rels[k] = "added"
+    for k in proj.relationships.keys() & base.relationships.keys():
+        if _rel_material(base.relationships[k]) != _rel_material(proj.relationships[k]):
+            rels[k] = "modified"
     rules = {
         "removed": sorted(base.rules.keys() - proj.rules.keys()),
         "added": sorted(proj.rules.keys() - base.rules.keys()),

@@ -298,6 +298,8 @@ def load_snapshot(db: Session, version_id: uuid.UUID) -> Snapshot:
             "level": r.contribution_level.value if r.contribution_level else None,
             "rule_id": str(r.requirement_rule_id) if r.requirement_rule_id else None,
             "rationale": r.rationale,
+            "strength": _num(r.strength),
+            "strength_source": r.strength_source,
             "scope": r.scope,
             "is_synthetic": r.is_synthetic,
             "evidence": {

@@ -52,6 +52,8 @@ services:
       CFS_BROKER_URL: redis://redis:6379/0
       CFS_STORAGE_ROOT: /data/objects
     command: celery -A cfs_worker.app worker --loglevel=INFO --concurrency=2
+    healthcheck:
+      disable: true  # the image health check probes the API port; the worker serves no HTTP
     volumes:
       - ../services/api/cfs:/app/cfs
       - ../services/worker/cfs_worker:/app/cfs_worker

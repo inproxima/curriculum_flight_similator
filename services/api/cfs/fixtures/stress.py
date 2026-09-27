@@ -127,6 +127,19 @@ def build(db: Session) -> uuid.UUID:
                 level=rng.choice(list(ContributionLevel)),
                 is_synthetic=True,
             )
+            if rng.random() < 0.5:
+                create_relationship(
+                    db,
+                    p.org_id,
+                    v.id,
+                    topics[rng.randrange(N_TOPICS)].id,
+                    o.id,
+                    RelType.supports,
+                    origin=F,
+                    basis=X,
+                    review=ReviewState.accepted,
+                    is_synthetic=True,
+                )
             if rng.random() < 0.4:
                 create_relationship(
                     db,
@@ -257,6 +270,7 @@ def bench(db: Session, vid: uuid.UUID) -> str:
     from cfs.graph import queries
     from cfs.graph.snapshot import load_snapshot
     from cfs.graph.view import build_view
+    from cfs.graph.web import build_web
     from cfs.scenarios.engine import analyze
     from cfs.scenarios.ops import diff, project
 
@@ -275,6 +289,15 @@ def bench(db: Session, vid: uuid.UUID) -> str:
     rows.append(("Prior learning, final-year course", *_t(lambda: queries.prior_learning(snap, late))[:2]))
     rows.append(("Downstream, first-year course", *_t(lambda: queries.downstream(snap, early))[:2]))
     rows.append(("Outcome matrix", *_t(lambda: outcome_matrix(snap))[:2]))
+
+    def web(detail):
+        snap.invalidate()  # measure a cold alignment index each time
+        return build_web(snap, detail=detail)
+
+    med, mx, w = _t(lambda: web("overview"))
+    rows.append((f"Alignment Web, overview ({w['stats']['nodes']} nodes, {w['stats']['edges']} edges)", med, mx))
+    med, mx, w = _t(lambda: web("full"), n=3)
+    rows.append((f"Alignment Web, full ({w['stats']['nodes']} nodes, {w['stats']['edges']} edges)", med, mx))
     rows.append(("Issue detection", *_t(lambda: detect_issues(snap), n=3)[:2]))
     sid = str(uuid.uuid4())
     targets = [c["id"] for c in sorted(snap.courses(), key=lambda c: c["key"])[10:13]]

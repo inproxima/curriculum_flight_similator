@@ -70,6 +70,10 @@ FIXTURE = Origin.synthetic_fixture
 EXPLICIT, INTERP = EvidenceBasis.explicit_statement, EvidenceBasis.interpretation
 
 
+def _strength(st: list) -> dict[str, Any]:
+    return {"strength": st[0], "strength_source": "fixture"} if st else {}
+
+
 def materialize(
     db: Session, p: Principal, fx: dict[str, Any], cv: CurriculumVersion, pathways: dict[str, uuid.UUID]
 ) -> dict[str, Entity]:
@@ -154,8 +158,8 @@ def materialize(
                 details={"statement_verbatim": o["statement"], "normalized_label": o["statement"][:300]},
             )
             rel(c["code"], o["key"], RelType.has_outcome)
-            for plo, lvl in o.get("contributes", []):
-                rel(o["key"], plo, RelType.contributes_to, level=ContributionLevel(lvl))
+            for plo, lvl, *st in o.get("contributes", []):
+                rel(o["key"], plo, RelType.contributes_to, level=ContributionLevel(lvl), **_strength(st))
         for tk in c.get("topics", []):
             rel(c["code"], tk, RelType.covers_topic)
         for a in c.get("assessments", []):
@@ -168,11 +172,18 @@ def materialize(
                     "weight_percent": a.get("weight"),
                     "timing_week": a.get("week"),
                     "timing_text": f"week {a['week']}" if a.get("week") else None,
+                    "documented_hours": a.get("hours"),
                 },
             )
             rel(c["code"], a["key"], RelType.has_assessment)
             for ok in a.get("assesses", []):
                 rel(a["key"], ok, RelType.assesses)
+
+    # Topic → course-outcome support (vertical alignment below the outcome).
+    for c in fx["courses"]:
+        for o in c.get("outcomes", []):
+            for tk in o.get("supported_by", []):
+                rel(tk, o["key"], RelType.supports)
 
     # Requisite rules (explicit expressions) and the formal edges derived from their leaves.
     coreq_pairs: set[frozenset[str]] = set()
@@ -221,6 +232,16 @@ def materialize(
             basis=basis,
             review=ReviewState(tp["review"]),
             rationale=tp.get("rationale") or tp.get("evidence"),
+        )
+    for op in fx.get("outcome_preparation", []):
+        rel(
+            op["from"],
+            op["to"],
+            RelType.prepares_for,
+            basis=EXPLICIT if op["basis"] == "explicit_statement" else INTERP,
+            review=ReviewState(op["review"]),
+            rationale=op.get("rationale"),
+            **_strength([op["strength"]] if op.get("strength") is not None else []),
         )
     for ip in fx.get("inferred_preparation", []):
         rel(

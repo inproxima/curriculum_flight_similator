@@ -18,6 +18,15 @@ Fixture: 150 courses, 1,112 entities, 2,098 relationships (3 outcomes and 2 asse
 | Issue detection | 18.9 | 19.1 |
 | Scenario analysis, remove 3 courses (38 findings) | 103.5 | 104.1 |
 
+Alignment Web (measured 2026-09-27, same fixture with topic → outcome `supports` links added: 2,326 relationships;
+cold alignment index each run):
+
+| Operation | median ms | max ms |
+|---|---:|---:|
+| Alignment Web, overview (162 nodes, 447 edges) | 10.0 | 27.6 |
+| Alignment Web, full (1,112 nodes, 2,326 edges) | 12.6 | 30.3 |
+| Scenario analysis with ripple and scorecard, remove 3 courses (46 findings) | 116.9 | 119.9 |
+
 Before indexing relationships on the snapshot, the outcome matrix took 309 ms and scenario analysis took 1,382 ms.
 
 ## HTTP and browser (Chrome, Vite dev server in Docker)
@@ -35,5 +44,7 @@ Browser timings are recorded in `window.__cfsPerf.all()`.
 ## Budgets
 - Keep course-level overview layout under 1 s cold and 300 ms warm at 150 courses.
 - Keep deterministic scenario analysis under 250 ms at 150 courses (it runs synchronously in the request).
+- Keep `/web` under 300 ms (overview) and 800 ms (full) at 150 courses. Above 600 elements, `detail=auto`
+  serves the overview (courses and program outcomes with bundled links) and a focus adds the neighbourhood.
 - The graph view has a visible-node budget (default 300). Above it, the response is truncated with an
   explanation, and the UI points to filters, focus, or the table view.

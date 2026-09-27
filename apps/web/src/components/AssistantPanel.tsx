@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "../api/client";
 import { useAiMutations, useAiStatus, useConversations, useMessages, waitForJob, type ChatMessage, type Critique, type Envelope, type Proposal } from "../api/aiHooks";
 import { useEntity } from "../api/hooks";
-import { useScenario, useScenarioMutations } from "../api/scenarioHooks";
+import { useApplyChange, useScenario, useScenarioMutations } from "../api/scenarioHooks";
 import { useUi } from "../store/ui";
 import { EvidenceChip } from "./Evidence";
 
@@ -212,28 +212,23 @@ function EnvelopeView({ env, messageId, onCritique, busy }: { env: Envelope; mes
   );
 }
 
-function ProposalCard({ p }: { p: Proposal }) {
+export function ProposalCard({ p }: { p: Proposal }) {
   const { versionId, scenarioId, setScenario } = useUi();
   const scenario = useScenario(scenarioId);
   const sm = useScenarioMutations(scenarioId);
+  const applyChange = useApplyChange();
   const [state, setState] = useState<"idle" | "applied" | "dismissed" | "error">("idle");
   const [msg, setMsg] = useState<string | null>(null);
   const apply = async () => {
     try {
-      let sid = scenarioId;
-      let rev = scenario.data?.revision;
-      if (!sid) {
+      if (scenarioId) {
+        await applyChange(scenarioId, scenario.data!.revision, p.change);
+      } else {
+        // apply the first change before switching to the new scenario, so no view caches it empty
         const s = await sm.create.mutateAsync({ base_version_id: versionId!, title: `From assistant: ${p.summary.slice(0, 60)}` });
-        sid = s.id;
-        rev = s.revision;
+        await applyChange(s.id, s.revision, p.change);
         setScenario(s.id);
       }
-      const res = await fetch(`/api/v1/scenarios/${sid}/changes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "If-Match": String(rev) },
-        body: JSON.stringify(p.change),
-      });
-      if (!res.ok) throw new Error((await res.json()).error?.message ?? "failed");
       setState("applied");
       setMsg(scenarioId ? "Applied to the selected scenario." : "Created a new scenario and applied the change.");
     } catch (e) {

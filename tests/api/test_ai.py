@@ -375,7 +375,7 @@ def test_ai_extraction_job_creates_review_items_only(client, db, v2, monkeypatch
                 "preparation_statements": [],
                 "program_outcomes": [
                     {
-                        "number": 9,
+                        "number": 11,
                         "label": "Findings on sequencing",
                         "statement": None,
                         "quote": "Findings on sequencing",
@@ -392,7 +392,7 @@ def test_ai_extraction_job_creates_review_items_only(client, db, v2, monkeypatch
     r = client.post(f"/api/v1/document-versions/{dv.id}/ai-extract")
     job = client.get(f"/api/v1/jobs/{r.json()['job_id']}").json()
     assert job["status"] == "succeeded", job
-    items = db.scalars(select(ReviewItem).where(ReviewItem.dedupe_key.like(f"plo:PLO9:{v2}:%"))).all()
+    items = db.scalars(select(ReviewItem).where(ReviewItem.dedupe_key.like(f"plo:PLO11:{v2}:%"))).all()
     assert items and items[0].model_run_id is not None and items[0].payload["origin"] == "model"
     assert client.get(f"/api/v1/versions/{v2}/graph?layers=plo_alignment").json()["stats"]["nodes"] == before
     r2 = client.post(f"/api/v1/document-versions/{dv.id}/ai-extract")
@@ -507,3 +507,94 @@ def test_cost_accounting_uses_published_prices():
     assert cost_usd("claude-sonnet-5", 1_000_000, 1_000_000) == 12.0
     assert cost_usd("gpt-6-sol", 1_000_000, 0, cached_input_tokens=500_000) == 1.1
     assert cost_usd("unknown-model", 10, 10) is None
+
+
+def test_course_outline_extraction_keeps_only_verbatim_content():
+    """Outcomes, assessments, and topics must be quoted verbatim; weights and weeks only when stated."""
+    from cfs.ai.extraction import validate_extraction
+
+    pages = {
+        1: "MATH 249 Introductory Calculus\nH(4-2) 3 units\n"
+        "1. Compute limits of functions.\n2. Differentiate elementary functions.\n"
+        "Midterm Exam, 25%, Week 7\nFinal Exam 40% (scheduled by the Registrar)\n"
+        "Topics: Limits and continuity; Derivatives",
+    }
+    out = {
+        "course_details": [
+            {
+                "code": "MATH 249",
+                "title": "Introductory Calculus",
+                "code_quote": "MATH 249 Introductory Calculus",
+                "page": 1,
+                "credits": 3,
+                "credits_quote": "3 units",
+                "description_quote": None,
+            }
+        ],
+        "course_outcomes": [
+            {
+                "course_code": "MATH 249",
+                "number": 1,
+                "statement": "Compute limits of functions.",
+                "quote": "1. Compute limits of functions.",
+                "page": 1,
+            },
+            {
+                "course_code": "MATH 249",
+                "number": 2,
+                "statement": "Integrate everything.",
+                "quote": "2. Differentiate elementary functions.",
+                "page": 1,
+            },
+        ],
+        "assessments": [
+            {
+                "course_code": "MATH 249",
+                "name": "Midterm Exam",
+                "format": "Exam",
+                "weight_percent": 25,
+                "timing_text": "Week 7",
+                "timing_week": 7,
+                "quote": "Midterm Exam, 25%, Week 7",
+                "page": 1,
+            },
+            {
+                "course_code": "MATH 249",
+                "name": "Final Exam",
+                "format": "exam",
+                "weight_percent": 50,
+                "timing_text": "April",
+                "timing_week": 13,
+                "quote": "Final Exam 40% (scheduled by the Registrar)",
+                "page": 1,
+            },
+        ],
+        "topics": [
+            {
+                "course_code": "MATH 249",
+                "name": "Limits and continuity",
+                "quote": "Topics: Limits and continuity; Derivatives",
+                "page": 1,
+            },
+            {
+                "course_code": "MATH 249",
+                "name": "Series",
+                "quote": "Topics: Limits and continuity; Derivatives",
+                "page": 1,
+            },
+        ],
+    }
+    cands, report = validate_extraction(out, pages)
+    course = next(c for c in cands if c["kind"] == "course")
+    assert course["detail_only"] and course["fields"]["credits"]["value"] == 3.0
+    assert [c["key"] for c in cands if c["kind"] == "outcome"] == ["MATH249-CO1"]
+    assert {c["key"] for c in cands if c["kind"] == "assessment"} == {"MATH249-A-midterm-exam", "MATH249-A-final-exam"}
+    a = {c["title"]: c for c in cands if c["kind"] == "assessment"}
+    assert (
+        a["Midterm Exam"]["weight"] == 25.0 and a["Midterm Exam"]["week"] == 7 and a["Midterm Exam"]["format"] == "exam"
+    )
+    assert (
+        a["Final Exam"]["weight"] is None and a["Final Exam"]["week"] is None and a["Final Exam"]["timing_text"] is None
+    )
+    assert [c["key"] for c in cands if c["kind"] == "topic"] == ["MATH249-T-limits-and-continuity"]
+    assert report["accepted"]["outcome"] == 1

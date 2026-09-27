@@ -117,9 +117,12 @@ Grounding rules (strict):
 MODE_NOTE = {
     "explore": "Mode: EXPLORE — explain and point to the relevant parts of the map.",
     "investigate": "Mode: INVESTIGATE — run a focused analysis with the tools and report findings with their basis.",
-    "simulate": "Mode: SIMULATE — draft concrete, minimal scenario changes (proposed_changes) and explain the "
-    "expected implications; use run_scenario_analysis when a scenario is selected. Pedagogical "
-    "suggestions are judgment calls: label them as ai_interpretation.",
+    "simulate": "Mode: SIMULATE — the user describes a change to anything in the program (a course, a course "
+    "outcome, an assignment/assessment, a topic, a program outcome, or a link's strength). Draft concrete, minimal "
+    "scenario changes (proposed_changes), validate each with validate_scenario_change, and explain the expected "
+    "ripple (assessment → course outcome → program outcome → later courses) using get_alignment. Use "
+    "run_scenario_analysis when a scenario is selected. Pedagogical suggestions are judgment calls: label them "
+    "as ai_interpretation.",
 }
 
 OPS_HELP = """Scenario operation shapes (op_json):
@@ -127,15 +130,26 @@ OPS_HELP = """Scenario operation shapes (op_json):
 {"op":"remove_course","entity_id":ID}
 {"op":"add_course","code":"ABCD 123","title":"...","year":N,"term":"fall","classification":"required|elective","credits":null,"description":null,"prerequisite_text":null}
 {"op":"set_classification","entity_id":ID,"classification":"required|elective|pathway_required"}
-{"op":"add_outcome","course_id":ID,"statement":"...","contributes":[[PLO_ID,"introduce|reinforce|assess"]]}
-{"op":"remove_outcome","entity_id":ID} {"op":"modify_outcome","entity_id":ID,"statement":"..."}
+{"op":"modify_course","entity_id":ID,"title":null,"description":null,"credits":null}
+{"op":"add_outcome","course_id":ID,"statement":"...","contributes":[[PLO_ID,"introduce|reinforce|assess"]],"supported_by":[TOPIC_ID]}
+  (a contribution may carry an asserted strength 0–1: [PLO_ID,"reinforce",0.8])
+{"op":"remove_outcome","entity_id":ID} {"op":"modify_outcome","entity_id":ID,"statement":"...","contributes":null}
+{"op":"add_program_outcome","label":"...","statement":"..."} {"op":"modify_program_outcome","entity_id":ID,"label":null,"statement":null}
+{"op":"remove_program_outcome","entity_id":ID}
 {"op":"add_topic","course_id":ID,"title":"...","existing_topic_id":null,"level":null,"prepares":[]}
+{"op":"modify_topic","entity_id":ID,"title":null,"area":null,"level":null,"supports":[OUTCOME_ID] or null}
 {"op":"remove_topic","entity_id":ID,"course_id":ID}
-{"op":"change_assessment","entity_id":ID,"timing_week":N or null,"weight_percent":N or null,"shift_weeks":N or null}
+{"op":"add_assessment","course_id":ID,"title":"...","format":"group project|oral presentation|exam|...","weight_percent":N,"timing_week":N,"documented_hours":null,"description":null,"assesses":[OUTCOME_ID]}
+{"op":"change_assessment","entity_id":ID,"title":null,"description":null,"format":null,"timing_week":N or null,"weight_percent":N or null,"shift_weeks":N or null,"documented_hours":null,"assesses":[OUTCOME_ID] or null}
+{"op":"remove_assessment","entity_id":ID}
 {"op":"modify_requirement","course_id":ID,"rule_kind":"prerequisite","text":"ABCD 123 and (X or Y)"}
-{"op":"add_relationship","source":ID,"target":ID,"rel_type":"inferred_preparation|prepares_for|contributes_to","rationale":"..."}
+{"op":"add_relationship","source":ID,"target":ID,"rel_type":"prepares_for|supports|assesses|contributes_to|inferred_preparation","level":null,"strength":null,"rationale":"..."}
+  (allowed: outcome→program outcome contributes_to; assessment→outcome assesses; topic→outcome supports;
+   earlier outcome/assessment→later outcome prepares_for)
+{"op":"set_relationship_strength","key":RELATIONSHIP_KEY,"strength":0.0–1.0 or null,"level":null}
+{"op":"remove_relationship","key":RELATIONSHIP_KEY}
 {"op":"set_workload","entity_id":ID,"component":"reading|contact|practice|assignment_prep|assessment","low":N,"typical":N,"high":N}
-IDs are entity ids from get_entity (field "id")."""
+IDs are entity ids from get_entity (field "id"); relationship keys come from get_entity or get_alignment."""
 
 
 @dataclass
@@ -396,6 +410,63 @@ def make_tools(ctx: TurnContext) -> list[ToolSpec]:
             rows = [r for r in rows if r["course"]["key"].replace(" ", "") == a["course_key"].replace(" ", "")]
         return {"rows": rows[:60], "note": "Only imported assessment documents are represented."}
 
+    def get_alignment(a: dict) -> dict:
+        from cfs.analysis.alignment import alignment_index
+
+        idx = alignment_index(snap)
+        if not a.get("key"):
+            return {
+                "scorecard": idx["scorecard"],
+                "threads": [
+                    {k: t[k] for k in ("plo_key", "status", "missing", "strength", "label")} for t in idx["threads"]
+                ],
+                "gaps": idx["gaps"][:40],
+                "strength_model": "effective = trust × intensity × support; strong ≥ 0.70, moderate ≥ 0.45",
+            }
+        eid = _resolve(ctx, a["key"])
+        if eid is None:
+            return {"error": f"No entity {a['key']} in this curriculum version"}
+        e = snap.entities[eid]
+
+        def link(r):
+            st = idx["edges"].get(r["key"]) or {}
+            return {
+                "key": r["key"],
+                "type": r["type"],
+                "source": snap.entities.get(r["source"], {}).get("key"),
+                "target": snap.entities.get(r["target"], {}).get("key"),
+                "review_state": r["review_state"],
+                "basis": r["basis"],
+                "level": r.get("level"),
+                "effective": st.get("effective"),
+                "label": st.get("label"),
+            }
+
+        members = [eid]
+        if e["type"] == "course":
+            members += [
+                r["target"]
+                for r in snap.rels(source=eid)
+                if r["type"] in ("has_outcome", "has_assessment", "covers_topic")
+            ]
+        links = [
+            link(r)
+            for m in members
+            for r in snap.rels(source=m) + snap.rels(target=m)
+            if r["type"] in ("contributes_to", "assesses", "supports", "prepares_for")
+        ]
+        out = {
+            "entity": {"id": eid, "key": e["key"], "type": e["type"], "title": e["title"]},
+            "metrics": idx["nodes"].get(eid),
+            "links": sorted({x["key"]: x for x in links}.values(), key=lambda x: (x["type"], x["source"] or "")),
+            "gaps": [g for g in idx["gaps"] if set(g["entity_ids"]) & set(members)],
+        }
+        if e["type"] == "program_outcome":
+            out["thread"] = next((t for t in idx["threads"] if t["plo_id"] == eid), None)
+        if e["type"] == "course":
+            out["course_pairs"] = [p for p in idx["course_pairs"] if eid in (p["source_course"], p["target_course"])]
+        return out
+
     def compare_versions(a: dict) -> dict:
         from cfs.scenarios.ops import diff
 
@@ -546,6 +617,15 @@ def make_tools(ctx: TurnContext) -> list[ToolSpec]:
             "Assessments and the outcomes they assess.",
             S({"course_key": nstr}),
             get_assessment_alignment,
+        ),
+        ToolSpec(
+            "get_alignment",
+            "Alignment strengths for an entity (course, outcome, assessment, topic, program outcome) by key: its "
+            "vertical and horizontal links with effective strength (strong/moderate/weak), program-outcome thread "
+            "(introduce → reinforce → assess), course-pair bridges, and gaps. Without a key: program scorecard, "
+            "threads, and gaps.",
+            S({"key": nstr}),
+            get_alignment,
         ),
         ToolSpec(
             "compare_versions",

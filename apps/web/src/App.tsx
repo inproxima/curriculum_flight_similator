@@ -9,6 +9,7 @@ import { MatrixPage } from "./pages/MatrixPage";
 import { ReviewsPage } from "./pages/ReviewsPage";
 import { ScenariosPage } from "./pages/ScenariosPage";
 import { TablePage } from "./pages/TablePage";
+import { WebPage } from "./pages/WebPage";
 import { useUi } from "./store/ui";
 
 export function App() {
@@ -25,7 +26,8 @@ export function App() {
       ) : <div />}
       <TopBar evidenceRatio={evidenceRatio(graph.data)} />
       <Routes>
-        <Route path="/" element={<MapPage />} />
+        <Route path="/" element={<WebPage />} />
+        <Route path="/sequence" element={<MapPage />} />
         <Route path="/table" element={<TablePage />} />
         <Route path="/matrix" element={<MatrixPage />} />
         <Route path="/scenarios/*" element={<ScenariosPage />} />
