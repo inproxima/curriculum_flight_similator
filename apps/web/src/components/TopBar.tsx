@@ -5,7 +5,7 @@ import { useUi } from "../store/ui";
 import { ScenarioSelector } from "./ScenarioSelector";
 
 export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
-  const { programId, versionId, setProgram, setVersion, select, setFocus } = useUi();
+  const { programId, versionId, setProgram, setVersion, select, setFocus, assistantOpen, setAssistantOpen } = useUi();
   const programs = usePrograms();
   const versions = useVersions(programId);
   const jobs = useJobs(true);
@@ -54,7 +54,10 @@ export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
         <NavLink to="/scenarios">Scenarios</NavLink>
         <NavLink to="/reviews">Review inbox</NavLink>
         <NavLink to="/documents">Documents</NavLink>
+        <NavLink to="/ai">AI &amp; usage</NavLink>
       </nav>
+      <button className={assistantOpen ? "primary" : ""} aria-pressed={assistantOpen} onClick={() => setAssistantOpen(!assistantOpen)}
+        title="Open the grounded assistant (map view)">Assistant</button>
     </header>
   );
 }

@@ -7,10 +7,14 @@ def test_health_and_ready(client):
     assert r["checks"]["database"]["ok"] and r["checks"]["database"]["pgvector"]
 
 
-def test_ai_reports_unconfigured_instead_of_fabricating(client):
+def test_ai_reports_unconfigured_instead_of_fabricating(client, v1, monkeypatch):
+    from cfs.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "ai_provider_allowlist", "")
     st = client.get("/api/v1/ai/status").json()
-    assert st["implemented"] is False
-    r = client.post("/api/v1/conversations/x/messages")
+    assert not any(r["available"] for r in st["routes"])
+    c = client.post("/api/v1/conversations", json={"curriculum_version_id": v1}).json()
+    r = client.post(f"/api/v1/conversations/{c['id']}/messages", json={"text": "hi"})
     assert r.status_code == 503
     assert r.json()["error"]["code"] == "provider_unconfigured"
 

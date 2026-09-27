@@ -25,7 +25,7 @@ from cfs.graph.queries import evaluate_rules, exposure, owner_courses
 from cfs.graph.snapshot import Snapshot, time_index
 
 # Bump on ANY change to engine or cfs.analysis.coverage rules: cached runs are keyed on this version.
-ENGINE_VERSION = "engine-1.2.0"
+ENGINE_VERSION = "engine-1.3.0"
 SEV = {"info": 0, "low": 1, "medium": 2, "high": 3}
 RULE_RANK = {"satisfied_for_all": 3, "conditional": 2, "unknown": 1, "unsatisfied": 0}
 

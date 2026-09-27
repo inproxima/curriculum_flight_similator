@@ -63,6 +63,8 @@ def outcome_matrix(snap: Snapshot, pathway: str | None = None) -> dict[str, Any]
         cells = {}
         for p in plos:
             contribs = [r for o in cos for r in snap.rels("contributes_to", source=o, target=p["id"]) if _active(r)]
+            # course-level alignment (used when a source documents no course outcomes)
+            contribs += [r for r in snap.rels("contributes_to", source=c["id"], target=p["id"]) if _active(r)]
             doc = [r for r in contribs if _documented(r)]
             if doc:
                 state = "documented"

@@ -61,6 +61,7 @@ class DocumentVersionOut(ORM):
     processing_status: str
     page_count: int | None
     is_synthetic: bool
+    ai_providers: list[str] | None = None
     created_at: datetime
 
 
@@ -168,6 +169,7 @@ class ReviewItemOut(ORM):
     evidence_span_ids: list[uuid.UUID]
     subject_entity_id: uuid.UUID | None
     subject_relationship_revision_id: uuid.UUID | None
+    model_run_id: uuid.UUID | None = None
     created_at: datetime
 
 

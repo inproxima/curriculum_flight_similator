@@ -251,9 +251,15 @@ def materialize(
 
 
 def _run_inline(db: Session, job) -> None:
+    from cfs.models import Job
+    from cfs.models.enums import JobStatus
+
     db.commit()
     run_job(job.id)
     db.expire_all()
+    j = db.get(Job, job.id)
+    if j.status not in (JobStatus.succeeded, JobStatus.partial):
+        raise RuntimeError(f"Seed job {j.kind} failed: {j.error}")
 
 
 def _assign(

@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/ai/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Model Run */
+        get: operations["model_run_api_v1_ai_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/status": {
         parameters: {
             query?: never;
@@ -13,6 +30,23 @@ export interface paths {
         };
         /** Ai Status */
         get: operations["ai_status_api_v1_ai_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ai Usage */
+        get: operations["ai_usage_api_v1_ai_usage_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -38,7 +72,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/conversations/{conversation_id}/messages": {
+    "/api/v1/analyses/{run_id}/explain": {
         parameters: {
             query?: never;
             header?: never;
@@ -47,8 +81,47 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Post Message */
-        post: operations["post_message_api_v1_conversations__conversation_id__messages_post"];
+        /** Explain */
+        post: operations["explain_api_v1_analyses__run_id__explain_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversations */
+        get: operations["list_conversations_api_v1_conversations_get"];
+        put?: never;
+        /** Create Conversation */
+        post: operations["create_conversation_api_v1_conversations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{cid}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Messages */
+        get: operations["list_messages_api_v1_conversations__cid__messages_get"];
+        put?: never;
+        /**
+         * Post Message
+         * @description Queues an assistant turn. Stream progress from /jobs/{job_id}/stream; the answer is stored as a message.
+         */
+        post: operations["post_message_api_v1_conversations__cid__messages_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -71,6 +144,43 @@ export interface paths {
         head?: never;
         /** Patch Document Version */
         patch: operations["patch_document_version_api_v1_document_versions__dv_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/document-versions/{dv_id}/ai-extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Extract
+         * @description Model-assisted extraction. Sends this document's extracted text to the `extract` route's provider.
+         */
+        post: operations["ai_extract_api_v1_document_versions__dv_id__ai_extract_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/document-versions/{dv_id}/ai-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Policy */
+        put: operations["set_policy_api_v1_document_versions__dv_id__ai_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/document-versions/{dv_id}/file": {
@@ -325,6 +435,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/messages/{mid}/critique": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Critique */
+        post: operations["critique_api_v1_messages__mid__critique_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/programs": {
         parameters: {
             query?: never;
@@ -335,7 +462,8 @@ export interface paths {
         /** List Programs */
         get: operations["list_programs_api_v1_programs_get"];
         put?: never;
-        post?: never;
+        /** Create Program */
+        post: operations["create_program_api_v1_programs_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -422,6 +550,26 @@ export interface paths {
         get: operations["list_reviews_api_v1_reviews_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Decide
+         * @description Apply one decision to many items. Each item is decided and audited individually; failures are reported.
+         */
+        post: operations["bulk_decide_api_v1_reviews_bulk_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -744,6 +892,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/versions/{version_id}/ai-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ai Mappings */
+        post: operations["ai_mappings_api_v1_versions__version_id__ai_mappings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/versions/{version_id}/assessment-alignment": {
         parameters: {
             query?: never;
@@ -996,6 +1161,30 @@ export interface components {
             /** Title */
             title?: string | null;
         };
+        /** BulkDecision */
+        BulkDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "reject" | "defer";
+            /** Ids */
+            ids: string[];
+            /** Rationale */
+            rationale?: string | null;
+        };
+        /** ConversationIn */
+        ConversationIn: {
+            /**
+             * Curriculum Version Id
+             * Format: uuid
+             */
+            curriculum_version_id: string;
+            /** Scenario Id */
+            scenario_id?: string | null;
+            /** Title */
+            title?: string | null;
+        };
         /** DocumentOut */
         DocumentOut: {
             /**
@@ -1029,6 +1218,8 @@ export interface components {
         DocumentVersionOut: {
             /** Academic Year */
             academic_year: string | null;
+            /** Ai Providers */
+            ai_providers?: string[] | null;
             /** Cohort Applicability */
             cohort_applicability: string | null;
             /**
@@ -1143,6 +1334,17 @@ export interface components {
              */
             updated_at: string;
         };
+        /** MessageIn */
+        MessageIn: {
+            /**
+             * Mode
+             * @default explore
+             * @enum {string}
+             */
+            mode: "explore" | "investigate" | "simulate";
+            /** Text */
+            text: string;
+        };
         /** Page */
         Page: {
             /** Items */
@@ -1185,6 +1387,19 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** ProgramIn */
+        ProgramIn: {
+            /** Code */
+            code: string;
+            /** Description */
+            description?: string | null;
+            /** Institution */
+            institution?: string | null;
+            /** Name */
+            name: string;
+            /** Parent Degree */
+            parent_degree?: string | null;
+        };
         /** ProgramOut */
         ProgramOut: {
             /** Code */
@@ -1204,6 +1419,11 @@ export interface components {
             name: string;
             /** Parent Degree */
             parent_degree: string | null;
+        };
+        /** ProviderPolicy */
+        ProviderPolicy: {
+            /** Ai Providers */
+            ai_providers: ("openai" | "anthropic")[] | null;
         };
         /** PublishIn */
         PublishIn: {
@@ -1270,6 +1490,8 @@ export interface components {
             id: string;
             /** Kind */
             kind: string;
+            /** Model Run Id */
+            model_run_id?: string | null;
             /** Payload */
             payload: {
                 [key: string]: unknown;
@@ -1520,7 +1742,73 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    model_run_api_v1_ai_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ai_status_api_v1_ai_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_usage_api_v1_ai_usage_get: {
         parameters: {
             query?: never;
             header?: {
@@ -1586,14 +1874,14 @@ export interface operations {
             };
         };
     };
-    post_message_api_v1_conversations__conversation_id__messages_post: {
+    explain_api_v1_analyses__run_id__explain_post: {
         parameters: {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
             };
             path: {
-                conversation_id: string;
+                run_id: string;
             };
             cookie?: never;
         };
@@ -1605,9 +1893,145 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_conversations_api_v1_conversations_get: {
+        parameters: {
+            query?: {
+                curriculum_version_id?: string | null;
+            };
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_conversation_api_v1_conversations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_messages_api_v1_conversations__cid__messages_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path: {
+                cid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_message_api_v1_conversations__cid__messages_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path: {
+                cid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -1678,6 +2102,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentVersionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_extract_api_v1_document_versions__dv_id__ai_extract_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path: {
+                dv_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_policy_api_v1_document_versions__dv_id__ai_policy_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path: {
+                dv_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderPolicy"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -2221,6 +2715,39 @@ export interface operations {
             };
         };
     };
+    critique_api_v1_messages__mid__critique_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path: {
+                mid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_programs_api_v1_programs_get: {
         parameters: {
             query?: never;
@@ -2239,6 +2766,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgramOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_program_api_v1_programs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgramIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -2434,6 +2996,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_decide_api_v1_reviews_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -3216,6 +3813,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VersionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_mappings_api_v1_versions__version_id__ai_mappings_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+            };
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

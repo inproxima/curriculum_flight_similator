@@ -289,9 +289,14 @@ def ingest_document(db: Session, job: Job, ctx: JobContext) -> dict[str, Any]:
         ctx.event("Document is not assigned to a curriculum version yet; candidates will be resolved on assignment.")
 
     ctx.stage("index", 0.9, "Indexing")
-    ctx.event(
-        "Full-text index updated. Embeddings skipped: no embedding provider configured (Phase 5).", status="warning"
-    )
+    try:
+        from cfs.ai.retrieval import embed_document
+
+        emb = embed_document(db, dv.organization_id, dv.id, job_id=job.id)
+        ctx.event(f"Full-text index updated; {emb['embedded']} chunks embedded with {emb['model']}.")
+    except Exception as e:  # noqa: BLE001 — embeddings are optional; retrieval degrades to full-text
+        db.rollback()
+        ctx.event(f"Full-text index updated. Embeddings skipped: {str(e)[:200]}", status="warning")
     ctx.stage("refresh", 0.97, "Refreshing curriculum graph")
     dv.processing_status = ProcessingStatus.partial if warnings else ProcessingStatus.processed
     db.commit()

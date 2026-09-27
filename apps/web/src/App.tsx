@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import { usePrograms } from "./api/hooks";
 import { SourceViewer } from "./components/Evidence";
 import { TopBar } from "./components/TopBar";
+import { AiPage } from "./pages/AiPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { MapPage, evidenceRatio, useGraphForUi } from "./pages/MapPage";
 import { MatrixPage } from "./pages/MatrixPage";
@@ -30,6 +31,7 @@ export function App() {
         <Route path="/scenarios/*" element={<ScenariosPage />} />
         <Route path="/reviews" element={<ReviewsPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
+        <Route path="/ai" element={<AiPage />} />
       </Routes>
       <SourceViewer />
     </div>

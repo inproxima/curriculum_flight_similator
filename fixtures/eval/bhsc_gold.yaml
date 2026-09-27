@@ -1,0 +1,97 @@
+# Human-built gold standard for extraction and retrieval on the REAL BHSc Biomedical Sciences sources.
+# Built by reading the documents (2026-09-26). Reviewers: correct this file if you disagree; evals re-score.
+documents:
+  outline_2025_26:
+    filename: "2025-2026 Biomedical Sciences.pdf"
+    courses:  # code: year (grid courses only; placeholders such as "English 2XX" and option slots excluded)
+      BIOL 211: 1
+      BIOL 213: 1
+      CHEM 201: 1
+      CHEM 203: 1
+      MATH 249: 1
+      PHYS 221: 1
+      PHYS 223: 1
+      MDSC 203: 1
+      MDSC 205: 1
+      CHEM 351: 2
+      CHEM 353: 2
+      MDSC 341: 2
+      MDSC 351: 2
+      BCEM 393: 2
+      MDSC 308: 2
+      MDSC 407: 3
+      MDSC 408: 3
+      MDSC 508: 4
+    full_year: []        # the outline itself does not say "full year" (MDSC 508 "held over two terms", terms unnamed)
+    credits: {MDSC 508: 12}
+    option_slots:        # (name, year): slots shown in the grid
+      Humanities Option|2: 1
+      Open Option|2: 1
+      Core Option|2: 1
+      Core Option|3: 4
+      Open Option|3: 2
+      Senior Option|3: 1
+      Senior Option|4: 3
+      Biomedical Option|4: 3
+    program_outcomes: []
+  webpage_2026:
+    filename: "Biomedical_Sciences_Program_Webpage.pdf"
+    courses:
+      BIOL 211: 1
+      BIOL 213: 1
+      CHEM 201: 1
+      CHEM 203: 1
+      PHYS 221: 1
+      MDSC 203: 1
+      MDSC 205: 1
+      MATH 249: 1
+      MDSC 341: 2
+      MDSC 351: 2
+      CHEM 351: 2
+      CHEM 353: 2
+      MDSC 308: 2
+      BCEM 393: 2
+      MDSC 408: 3
+      MDSC 407: 3
+      MDSC 508: 4
+    full_year: [MDSC 308, MDSC 408, MDSC 508]
+    credits: {}
+    option_slots:
+      Open Option|1: 1
+      Open Option|2: 1
+      Humanities Option|2: 1
+      Core Option|2: 1
+      Core Option|3: 4
+      Open Option|3: 2
+      Senior Option|3: 1
+      Senior Option|4: 3
+      Biomedical Option|4: 3
+    program_outcomes: []
+  review_2019:
+    filename: "Faculty of Science -Bachelor of Health Sciences Curriculum Review Public Report.pdf"
+    courses: {}
+    full_year: []
+    credits: {}
+    option_slots: {}
+    program_outcomes:
+      - Critical Thinking Skills
+      - Oral Communication Skills
+      - Written Communication Skills
+      - Research Skills
+      - Scholarly and Disciplinary Literacy
+      - Collaboration
+      - Foundational Knowledge and Perspectives
+      - Application of Foundational Knowledge and Perspectives
+retrieval:  # query -> acceptable (document filename prefix, page) hits
+  - q: "honours thesis defended in front of a panel oral examination"
+    expect: [["Biomedical_Sciences_Program_Webpage", 5]]
+  - q: "program-level learning outcomes headings"
+    expect: [["Faculty of Science", 4]]
+  - q: "acceptable Faculty of Arts courses for the Biomedical Option"
+    expect: [["Biomedical_Sciences_Program_Webpage", 6], ["2025-2026 Biomedical Sciences", 1]]
+  - q: "statistics literacy for analysing health-related data"
+    expect: [["Biomedical_Sciences_Program_Webpage", 4], ["Biomedical_Sciences_Program_Webpage", 5]]
+  - q: "precision medicine course action plan"
+    expect: [["Faculty of Science", 5], ["Faculty of Science", 6]]
+  - q: "cannot be taken in the same year as MDSC 508"
+    expect: [["Biomedical_Sciences_Program_Webpage", 6], ["2025-2026 Biomedical Sciences", 1]]

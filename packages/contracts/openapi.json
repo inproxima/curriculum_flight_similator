@@ -114,6 +114,81 @@
     "title": "Body_upload_document_api_v1_documents_post",
     "type": "object"
    },
+   "BulkDecision": {
+    "properties": {
+     "decision": {
+      "enum": [
+       "accept",
+       "reject",
+       "defer"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Ids",
+      "type": "array"
+     },
+     "rationale": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rationale"
+     }
+    },
+    "required": [
+     "ids",
+     "decision"
+    ],
+    "title": "BulkDecision",
+    "type": "object"
+   },
+   "ConversationIn": {
+    "properties": {
+     "curriculum_version_id": {
+      "format": "uuid",
+      "title": "Curriculum Version Id",
+      "type": "string"
+     },
+     "scenario_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Scenario Id"
+     },
+     "title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Title"
+     }
+    },
+    "required": [
+     "curriculum_version_id"
+    ],
+    "title": "ConversationIn",
+    "type": "object"
+   },
    "DocumentOut": {
     "properties": {
      "created_at": {
@@ -189,6 +264,20 @@
        }
       ],
       "title": "Academic Year"
+     },
+     "ai_providers": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ai Providers"
      },
      "cohort_applicability": {
       "anyOf": [
@@ -526,6 +615,29 @@
     "title": "JobOut",
     "type": "object"
    },
+   "MessageIn": {
+    "properties": {
+     "mode": {
+      "default": "explore",
+      "enum": [
+       "explore",
+       "investigate",
+       "simulate"
+      ],
+      "title": "Mode",
+      "type": "string"
+     },
+     "text": {
+      "title": "Text",
+      "type": "string"
+     }
+    },
+    "required": [
+     "text"
+    ],
+    "title": "MessageIn",
+    "type": "object"
+   },
    "Page": {
     "properties": {
      "items": {
@@ -641,6 +753,57 @@
     "title": "PathwayOut",
     "type": "object"
    },
+   "ProgramIn": {
+    "properties": {
+     "code": {
+      "title": "Code",
+      "type": "string"
+     },
+     "description": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Description"
+     },
+     "institution": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Institution"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     },
+     "parent_degree": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Parent Degree"
+     }
+    },
+    "required": [
+     "code",
+     "name"
+    ],
+    "title": "ProgramIn",
+    "type": "object"
+   },
    "ProgramOut": {
     "properties": {
      "code": {
@@ -704,6 +867,33 @@
      "is_synthetic"
     ],
     "title": "ProgramOut",
+    "type": "object"
+   },
+   "ProviderPolicy": {
+    "properties": {
+     "ai_providers": {
+      "anyOf": [
+       {
+        "items": {
+         "enum": [
+          "openai",
+          "anthropic"
+         ],
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ai Providers"
+     }
+    },
+    "required": [
+     "ai_providers"
+    ],
+    "title": "ProviderPolicy",
     "type": "object"
    },
    "PublishIn": {
@@ -875,6 +1065,18 @@
      "kind": {
       "title": "Kind",
       "type": "string"
+     },
+     "model_run_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Run Id"
      },
      "payload": {
       "additionalProperties": true,
@@ -1574,6 +1776,63 @@
  },
  "openapi": "3.1.0",
  "paths": {
+  "/api/v1/ai/runs/{run_id}": {
+   "get": {
+    "operationId": "model_run_api_v1_ai_runs__run_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "run_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Run Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Model Run",
+    "tags": [
+     "ai"
+    ]
+   }
+  },
   "/api/v1/ai/status": {
    "get": {
     "operationId": "ai_status_api_v1_ai_status_get",
@@ -1620,6 +1879,57 @@
      }
     },
     "summary": "Ai Status",
+    "tags": [
+     "ai"
+    ]
+   }
+  },
+  "/api/v1/ai/usage": {
+   "get": {
+    "operationId": "ai_usage_api_v1_ai_usage_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Ai Usage Api V1 Ai Usage Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Ai Usage",
     "tags": [
      "ai"
     ]
@@ -1682,16 +1992,17 @@
     ]
    }
   },
-  "/api/v1/conversations/{conversation_id}/messages": {
+  "/api/v1/analyses/{run_id}/explain": {
    "post": {
-    "operationId": "post_message_api_v1_conversations__conversation_id__messages_post",
+    "operationId": "explain_api_v1_analyses__run_id__explain_post",
     "parameters": [
      {
       "in": "path",
-      "name": "conversation_id",
+      "name": "run_id",
       "required": true,
       "schema": {
-       "title": "Conversation Id",
+       "format": "uuid",
+       "title": "Run Id",
        "type": "string"
       }
      },
@@ -1716,11 +2027,249 @@
      "200": {
       "content": {
        "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
         "schema": {
-         "additionalProperties": true,
-         "title": "Response Post Message Api V1 Conversations  Conversation Id  Messages Post",
-         "type": "object"
+         "$ref": "#/components/schemas/HTTPValidationError"
         }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Explain",
+    "tags": [
+     "ai"
+    ]
+   }
+  },
+  "/api/v1/conversations": {
+   "get": {
+    "operationId": "list_conversations_api_v1_conversations_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "curriculum_version_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Curriculum Version Id"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "List Conversations",
+    "tags": [
+     "ai"
+    ]
+   },
+   "post": {
+    "operationId": "create_conversation_api_v1_conversations_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConversationIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Create Conversation",
+    "tags": [
+     "ai"
+    ]
+   }
+  },
+  "/api/v1/conversations/{cid}/messages": {
+   "get": {
+    "operationId": "list_messages_api_v1_conversations__cid__messages_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "cid",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Cid",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "List Messages",
+    "tags": [
+     "ai"
+    ]
+   },
+   "post": {
+    "description": "Queues an assistant turn. Stream progress from /jobs/{job_id}/stream; the answer is stored as a message.",
+    "operationId": "post_message_api_v1_conversations__cid__messages_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "cid",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Cid",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MessageIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "202": {
+      "content": {
+       "application/json": {
+        "schema": {}
        }
       },
       "description": "Successful Response"
@@ -1865,6 +2414,131 @@
     "summary": "Patch Document Version",
     "tags": [
      "documents"
+    ]
+   }
+  },
+  "/api/v1/document-versions/{dv_id}/ai-extract": {
+   "post": {
+    "description": "Model-assisted extraction. Sends this document's extracted text to the `extract` route's provider.",
+    "operationId": "ai_extract_api_v1_document_versions__dv_id__ai_extract_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "dv_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Dv Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Ai Extract",
+    "tags": [
+     "ai"
+    ]
+   }
+  },
+  "/api/v1/document-versions/{dv_id}/ai-policy": {
+   "put": {
+    "operationId": "set_policy_api_v1_document_versions__dv_id__ai_policy_put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "dv_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Dv Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProviderPolicy"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Set Policy",
+    "tags": [
+     "ai"
     ]
    }
   },
@@ -2850,6 +3524,63 @@
     ]
    }
   },
+  "/api/v1/messages/{mid}/critique": {
+   "post": {
+    "operationId": "critique_api_v1_messages__mid__critique_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "mid",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Mid",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Critique",
+    "tags": [
+     "ai"
+    ]
+   }
+  },
   "/api/v1/programs": {
    "get": {
     "operationId": "list_programs_api_v1_programs_get",
@@ -2899,6 +3630,62 @@
     },
     "summary": "List Programs",
     "tags": [
+     "programs"
+    ]
+   },
+   "post": {
+    "operationId": "create_program_api_v1_programs_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProgramIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Create Program",
+    "tags": [
+     "ai",
      "programs"
     ]
    }
@@ -3293,6 +4080,65 @@
     },
     "summary": "List Reviews",
     "tags": [
+     "reviews"
+    ]
+   }
+  },
+  "/api/v1/reviews/bulk": {
+   "post": {
+    "description": "Apply one decision to many items. Each item is decided and audited individually; failures are reported.",
+    "operationId": "bulk_decide_api_v1_reviews_bulk_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BulkDecision"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Bulk Decide",
+    "tags": [
+     "ai",
      "reviews"
     ]
    }
@@ -4902,6 +5748,63 @@
     "summary": "Get Version",
     "tags": [
      "versions"
+    ]
+   }
+  },
+  "/api/v1/versions/{version_id}/ai-mappings": {
+   "post": {
+    "operationId": "ai_mappings_api_v1_versions__version_id__ai_mappings_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Ai Mappings",
+    "tags": [
+     "ai"
     ]
    }
   },

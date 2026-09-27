@@ -40,6 +40,16 @@ export function TablePage() {
           ))}
         </tbody>
       </table>
+      <h2 style={{ marginTop: 16 }}>Option and elective rules</h2>
+      {data.groups.length === 0 && <p className="muted">No option rules recorded for this version.</p>}
+      {data.groups.length > 0 && (
+        <table className="data" aria-label="Option rules">
+          <thead><tr><th>Rule</th><th>Slots</th><th>Listed courses in this version</th><th>Documented rule text</th></tr></thead>
+          <tbody>{data.groups.map((g) => (
+            <tr key={g.code}><td>{g.name}</td><td>{g.min_courses ?? "not stated"}</td><td>{g.members.join(", ") || "—"}</td><td className="small">{g.rule_text ?? ""}</td></tr>
+          ))}</tbody>
+        </table>
+      )}
     </div>
   );
 }

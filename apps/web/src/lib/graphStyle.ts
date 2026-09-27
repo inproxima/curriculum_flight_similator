@@ -1,7 +1,8 @@
 import { MarkerType, type Edge } from "@xyflow/react";
 import type { GraphEdge, GraphNode } from "../api/types";
 
-export const TERM_INDEX: Record<string, number> = { fall: 0, winter: 1, spring: 2, summer: 2, full_year: 0 };
+export const TERM_INDEX: Record<string, number> = { fall: 0, winter: 1, spring: 2, summer: 2, full_year: 3 };
+const SLOTS = 5; // per year: fall, winter, spring/summer, full year, term not stated
 export const TERM_LABEL: Record<string, string> = {
   fall: "Fall", winter: "Winter", spring: "Spring", summer: "Summer", full_year: "Full year", unknown: "Term unknown",
 };
@@ -34,17 +35,17 @@ export function partitionOf(n: GraphNode, courseById: Map<string, GraphNode>): n
   if (n.type === "topic") return 999;
   const course = n.type === "course" ? n : n.owner_course ? courseById.get(n.owner_course) : undefined;
   if (!course || course.year == null) return 998;
-  const t = course.term && course.term in TERM_INDEX ? TERM_INDEX[course.term] : 2;
-  return (course.year - 1) * 3 + t + (n.type === "course" ? 0 : 0);
+  const t = course.term && course.term in TERM_INDEX ? TERM_INDEX[course.term] : 4;
+  return (course.year - 1) * SLOTS + t;
 }
 
 export function laneLabel(p: number): string {
   if (p === 1000) return "Program outcomes";
   if (p === 999) return "Topics";
   if (p === 998) return "Timing unknown";
-  const year = Math.floor(p / 3) + 1;
-  const t = p % 3;
-  return `Year ${year} · ${t === 0 ? "Fall" : t === 1 ? "Winter" : "Other/unknown term"}`;
+  const year = Math.floor(p / SLOTS) + 1;
+  const t = p % SLOTS;
+  return `Year ${year} · ${["Fall", "Winter", "Spring/Summer", "Full year", "Term not stated"][t]}`;
 }
 
 const COLORS = {

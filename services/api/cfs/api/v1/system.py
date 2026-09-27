@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from cfs.ai.gateway import provider_status, require_route
-from cfs.core.auth import Principal, get_principal
+from cfs.ai.gateway import provider_status
 from cfs.core.config import get_settings
 from cfs.core.db import get_db
 from cfs.ingest.ocr import ocr_available
@@ -48,14 +47,3 @@ def ready(db: Session = Depends(get_db)) -> dict[str, Any]:
     checks["ocr"] = {"ok": True, "tesseract": ocr_available()}
     checks["ai"] = {"ok": True, **{k: v for k, v in provider_status().items() if k in ("implemented", "providers")}}
     return {"ready": all(c.get("ok") for c in checks.values()), "checks": checks}
-
-
-@router.get("/ai/status", tags=["ai"])
-def ai_status(_: Principal = Depends(get_principal)) -> dict[str, Any]:
-    return provider_status()
-
-
-@router.post("/conversations/{conversation_id}/messages", tags=["ai"])
-def post_message(conversation_id: str, _: Principal = Depends(get_principal)) -> dict[str, Any]:
-    require_route("extract")
-    return {}

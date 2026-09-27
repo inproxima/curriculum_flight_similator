@@ -140,6 +140,7 @@ export function useTable(versionId: string | null) {
           outcome_count: number;
           evidence_fields: string[];
         }[];
+        groups: { code: string; name: string; min_courses: number | null; members: string[]; rule_text: string | null }[];
       }>(`${V1}/versions/${versionId}/table`),
   });
 }

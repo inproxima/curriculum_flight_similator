@@ -149,3 +149,11 @@ table.matrix td { text-align: center; min-width: 38px; }
 .error { color: var(--bad); }
 .notice { background: var(--warn-soft); border: 1px solid #ecd49d; color: #6d4700; border-radius: var(--radius); padding: 6px 10px; }
 .info { background: var(--accent-soft); border: 1px solid #c9d8ef; color: #23466f; border-radius: var(--radius); padding: 6px 10px; }
+
+.workspace.with-assistant { grid-template-columns: 240px 1fr 360px 420px; }
+.panel.assistant { display: flex; flex-direction: column; border-left: 1px solid var(--line); min-height: 0; }
+.chat { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; min-height: 0; }
+.bubble.user { align-self: flex-end; background: var(--accent-soft); border: 1px solid #c9d8ef; border-radius: 10px 10px 2px 10px; padding: 6px 10px; max-width: 90%; white-space: pre-wrap; }
+.envelope .answer { white-space: pre-wrap; line-height: 1.45; }
+.proposal { border-left: 3px solid var(--inferred); }
+.critique { border-left: 3px solid var(--warn); }

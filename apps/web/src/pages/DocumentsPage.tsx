@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ApiError, getJson } from "../api/client";
-import { useDocuments, useJobs, useVersionSources, useVersions, type DocumentVersionOut, type Job } from "../api/hooks";
+import { useAiMutations, useAiStatus } from "../api/aiHooks";
+import { useDocuments, useJobs, usePrograms, useVersionSources, useVersions, type DocumentVersionOut, type Job } from "../api/hooks";
 import { useUi } from "../store/ui";
 
 const DOC_TYPES = ["program_outline", "review_report", "webpage_extract", "course_outline", "assessment_document", "pasted_text", "other"];
@@ -22,6 +23,7 @@ export function DocumentsPage() {
   return (
     <div className="page" style={{ display: "grid", gridTemplateColumns: "minmax(420px, 1fr) minmax(360px, 1fr)", gap: 16 }}>
       <div>
+        <ProgramVersionForms />
         <UploadForm onUploaded={(jobId) => { setLastJob(jobId); qc.invalidateQueries({ queryKey: ["documents"] }); }} />
         {lastJob && <JobProgress jobId={lastJob} />}
         <h2 style={{ marginTop: 16 }}>Sources assigned to the selected version</h2>
@@ -95,6 +97,7 @@ function DocVersionRow({ dv }: { dv: DocumentVersionOut }) {
         {dv.is_synthetic && <span className="badge synthetic">SYNTHETIC</span>}
       </div>
       <DatesLine dv={dv} />
+      <AiRow dv={dv} />
       <details>
         <summary>Assign to a curriculum version</summary>
         <div className="col" style={{ marginTop: 6 }}>
@@ -213,5 +216,90 @@ function JobList({ jobs }: { jobs: Job[] }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+function AiRow({ dv }: { dv: DocumentVersionOut }) {
+  const m = useAiMutations();
+  const st = useAiStatus();
+  const [job, setJob] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const policy = (dv as DocumentVersionOut & { ai_providers?: string[] | null }).ai_providers;
+  const extractRoute = st.data?.routes.find((r) => r.name === "extract");
+  const value = policy == null ? "any" : policy.length === 0 ? "none" : policy.join(",");
+  return (
+    <div className="row wrap small" style={{ margin: "4px 0" }}>
+      <label className="row">AI policy
+        <select aria-label="AI provider policy" value={value} onChange={(e) => {
+          const v = e.target.value;
+          m.policy.mutate({ dvId: dv.id, providers: v === "any" ? null : v === "none" ? [] : v.split(",") });
+        }}>
+          <option value="any">Any allowlisted provider</option>
+          <option value="openai">OpenAI only</option>
+          <option value="anthropic">Anthropic only</option>
+          <option value="none">Never send to a model</option>
+        </select>
+      </label>
+      <button className="small" disabled={!extractRoute?.available || value === "none"}
+        title={`Sends this document's extracted text to ${extractRoute?.active?.join(" · ") ?? "the extraction route"}. Results become review items.`}
+        onClick={() => { setErr(null); m.extract.mutate(dv.id, { onSuccess: (r) => setJob(r.job_id), onError: (e) => setErr(e instanceof ApiError ? e.message : String(e)) }); }}>
+        Run AI extraction
+      </button>
+      {err && <span className="error">{err}</span>}
+      {job && <div style={{ width: "100%" }}><JobProgress jobId={job} /></div>}
+    </div>
+  );
+}
+
+function ProgramVersionForms() {
+  const { programId, versionId, setProgram } = useUi();
+  const programs = usePrograms();
+  const qc = useQueryClient();
+  const m = useAiMutations();
+  const [msg, setMsg] = useState<string | null>(null);
+  const [mapJob, setMapJob] = useState<string | null>(null);
+  const post = async (url: string, body: unknown) => getJson<{ id: string }>(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return (
+    <details className="card" style={{ marginBottom: 12 }}>
+      <summary><strong>Programs, versions, and AI proposals</strong></summary>
+      <form className="row wrap" style={{ marginTop: 8 }} onSubmit={async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        try {
+          const p = await post("/api/v1/programs", { code: f.get("code"), name: f.get("name"), institution: f.get("institution") || null });
+          await qc.invalidateQueries({ queryKey: ["programs"] });
+          setProgram(p.id);
+          setMsg("Program created.");
+        } catch (err) { setMsg(err instanceof ApiError ? err.message : String(err)); }
+      }}>
+        <input name="code" required placeholder="Program code" aria-label="Program code" style={{ width: 120 }} />
+        <input name="name" required placeholder="Program name" aria-label="Program name" />
+        <input name="institution" placeholder="Institution" aria-label="Institution" />
+        <button className="small">Create program</button>
+      </form>
+      <form className="row wrap" style={{ marginTop: 8 }} onSubmit={async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        try {
+          await post(`/api/v1/programs/${programId}/versions`, { label: f.get("label"), academic_year: f.get("academic_year") || null, cohort: f.get("cohort") || null });
+          await qc.invalidateQueries({ queryKey: ["versions"] });
+          setMsg("Draft version created.");
+        } catch (err) { setMsg(err instanceof ApiError ? err.message : String(err)); }
+      }}>
+        <span className="small">New draft version of <strong>{programs.data?.find((p) => p.id === programId)?.name ?? "—"}</strong>:</span>
+        <input name="label" required placeholder="Label, e.g. 2026–27" aria-label="Version label" />
+        <input name="academic_year" placeholder="Academic year" aria-label="Academic year" style={{ width: 110 }} />
+        <input name="cohort" placeholder="Cohort" aria-label="Cohort" />
+        <button className="small" disabled={!programId}>Create version</button>
+      </form>
+      <div className="row wrap" style={{ marginTop: 8 }}>
+        <button className="small" disabled={!versionId} title="Sends course descriptions and program-outcome labels of the selected version to the synthesis route; proposals go to the review inbox."
+          onClick={() => m.mappings.mutate(versionId!, { onSuccess: (r) => setMapJob(r.job_id), onError: (e) => setMsg(e instanceof ApiError ? e.message : String(e)) })}>
+          Propose outcome alignments with AI (selected version)
+        </button>
+      </div>
+      {mapJob && <JobProgress jobId={mapJob} />}
+      {msg && <p className="small">{msg}</p>}
+    </details>
   );
 }

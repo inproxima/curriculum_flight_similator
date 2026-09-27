@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from cfs.ingest.text import normalize
 
-PARSER_VERSION = "extract-1.0"
+PARSER_VERSION = "extract-1.1"  # 1.1: layout-preserving PDF text (keeps multi-column grids readable)
 MIN_CHARS_PER_PAGE = 40  # below this a PDF page is treated as image-only / low-quality
 
 
@@ -69,7 +69,9 @@ def _pdf_pages(data: bytes) -> list[PageText]:
     out: list[PageText] = []
     with pdfplumber.open(io.BytesIO(data)) as pdf:
         for i, page in enumerate(pdf.pages, start=1):
-            text = page.extract_text() or ""
+            # layout=True keeps columns spatially separated (e.g. program grids beside rule sidebars).
+            raw = page.extract_text(layout=True) or ""
+            text = "\n".join(line.rstrip() for line in raw.splitlines()).strip("\n")
             low = len(normalize(text)) < MIN_CHARS_PER_PAGE
             out.append(PageText(i, text, "pdfplumber", float(page.width), float(page.height), low))
     return out

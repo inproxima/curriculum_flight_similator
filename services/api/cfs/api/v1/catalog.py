@@ -194,7 +194,16 @@ def get_table(
                 "evidence_fields": sorted(c["field_evidence"].keys()),
             }
         )
-    return {"curriculum_version": snap.version, "rows": rows}
+    groups = [{"code": g["code"], "name": g["name"], "min_courses": g["min_courses"],
+               "members": sorted(snap.entities[m]["key"] for m in g["members"] if m in snap.entities)}
+              for g in sorted(snap.groups.values(), key=lambda g: g["code"])]
+    from cfs.models import RequirementGroup
+
+    texts = {g.code: g.description for g in db.scalars(select(RequirementGroup).where(
+        RequirementGroup.curriculum_version_id == version_id))}
+    for g in groups:
+        g["rule_text"] = texts.get(g["code"])
+    return {"curriculum_version": snap.version, "rows": rows, "groups": groups}
 
 
 def _entity_in_version(snap: Snapshot, entity_id: uuid.UUID) -> str:

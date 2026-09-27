@@ -28,9 +28,21 @@ class Settings(BaseSettings):
 
     max_upload_bytes: int = 50 * 1024 * 1024
 
-    # Phase 5 — provider credentials stay on the backend only.
+    # Provider credentials stay on the backend only.
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
+    # Providers that workspace content may be sent to (comma-separated). Removing one disables it everywhere.
+    ai_provider_allowlist: str = "openai,anthropic"
+    # Optional JSON route overrides, e.g. {"extract": {"provider": "anthropic", "model": "claude-sonnet-5"}}
+    ai_routes_json: str | None = None
+    # Optional JSON overriding per-model USD prices per 1M tokens: {"gpt-6-sol": {"input": 2, "output": 10}}
+    ai_prices_json: str | None = None
+    ai_max_cost_per_job_usd: float = 2.0
+    ai_monthly_budget_usd: float = 50.0
+    ai_timeout_seconds: float = 180.0
+    ai_max_retries: int = 2
+    ai_max_concurrency: int = 4
+    ai_embeddings_enabled: bool = True
 
     def validate_for_runtime(self) -> None:
         if self.env == "production" and self.auth_mode == "local_single_user":

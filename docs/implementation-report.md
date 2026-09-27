@@ -1,7 +1,35 @@
-# Implementation report — pass 1 (Phases 1–4)
+# Implementation report: Phases 1–5
 
-Date: 2026-09-26. All curriculum content in this build is a **synthetic fixture**, not University of Calgary data.
-The real BHSc sources (2019 review, 2025–26 outline, webpage PDF) were not available. Their extraction is untested.
+Pass 1 (Phases 1–4) and pass 2 (Phase 5, AI) were both completed on 2026-09-26. The workspace contains the labelled
+**synthetic fixture** and a **real** program, "Biomedical Sciences (BHSc)", imported from the three University of
+Calgary sources in `outputs/`.
+
+## Phase 5: AI assistance (pass 2)
+| Area | What exists | Verified by |
+|---|---|---|
+| Gateway | Route config with published prices; provider allowlist; per-document AI policy; fallback only under policy; per-job and monthly spend limits; concurrency caps; cache keyed by source hash, prompt version, and pipeline version; `model_runs` and `tool_calls` audit | `test_ai.py` (fallback, policy, spend limit, refusal, caching, cost), live runs |
+| Adapters | OpenAI Responses (`store=False`, strict tools and JSON schema); Anthropic Messages (streamed, `output_config` format and effort, strict tools, no forced tool choice, no native citations mixed with JSON) | request-shape tests; live calls to all six models |
+| Extraction | `gpt-6-sol` proposes courses, years, terms, credits, descriptions, option rules, outcomes, requisites, and stated preparation. The verifier drops unsupported items. Results merge with deterministic candidates across documents (higher authority wins; conflicts kept) and become review items | `test_ai.py`; [evaluation](evaluation.md) on the real documents |
+| Layout | PDF text keeps columns (parser 1.1), so the outline grid and its rule sidebar stay separable | real outline |
+| Mapping proposals | `gpt-6-astra` proposes course → program-outcome alignments from description quotes. They are review items only and always labelled inferred | live: 19 proposals, all quotes verified |
+| Retrieval | Hybrid FTS + pgvector (RRF), scoped to the version's assigned sources and filtered by provider policy; chunks embedded at ingest | eval: 12/12 hit@3 |
+| Assistant | Explore/Investigate (`gpt-6-sol`) and Simulate (`claude-sonnet-5`), with 12 typed, scoped tools (read-only; changes validated but never applied). Strict envelope, with server-side verification of citations, IDs, and proposals. Durable jobs with SSE progress. Critique (`claude-opus-5-5`) and analysis explanation (`gpt-6-astra`) | `test_ai.py` (fabricated IDs, citation matching, uncited warning, injection, routing); mocked Playwright UI test; live spot checks in `evaluation.md` |
+| UI | Assistant panel (modes, suggestions, citations, highlight, proposal cards, critique); Documents (AI extraction, AI policy, program and version creation, alignment proposals); review inbox (AI badges, conflicts, editable sources, bulk decisions); AI & usage page with per-run audit; "Explain with AI" on analyses | Playwright (7 tests) and manual browser checks |
+
+**Real-document results.** Deterministic extraction alone got nothing structured from the outline and no
+outcomes from the review. With verified model extraction, the 2025–26 and 2026–27 versions each have 17 courses
+(accepted in bulk during testing), 8 program outcomes (headings only), and 8–9 option rules. There are no formal
+prerequisite edges, because no source states one. One AI-inferred preparation link (BIOL 211 → MDSC 351) was
+accepted after a reviewer edit; the model had also proposed BIOL 213. Left open for faculty: the BCEM 393
+required/elective conflict, 19 outcome-alignment proposals, the MDSC 308 preparation proposal, MDSC 402, and the
+"BCEM 393 or 341" option item.
+
+**Spend during development and testing:** $0.52 (extraction $0.21, mapping $0.09, Simulate $0.16, critique $0.06,
+embeddings under $0.01).
+
+**Not verified live:** the `classify` route (`gpt-6-luna`; metadata suggestions currently come from the extraction
+run), vision fallback for image-only layouts (not implemented; Tesseract OCR is used), and provider outages. Fallback
+is covered by tests, not by a real outage.
 
 ## Implemented and tested
 | Area | What exists | Tests |
@@ -20,40 +48,36 @@ The real BHSc sources (2019 review, 2025–26 outline, webpage PDF) were not ava
 | Access | Roles admin/editor/reviewer/viewer enforced server-side; org isolation; local single-user mode refused when `CFS_ENV=production` | `test_access.py` |
 | Storage | Local filesystem and S3 implementations of one interface | `test_storage.py` (S3 via moto) |
 
-Totals: **56 backend tests** (pytest), **4 frontend unit tests** (vitest), and **6 end-to-end tests** (Playwright),
+Totals: **70 backend tests** (pytest, including 16 AI tests with fake providers), **4 frontend unit tests** (vitest), and **7 end-to-end tests** (Playwright, one with a mocked assistant),
 all passing. Backend lint (ruff) is clean. The frontend type check and production build pass.
 
 ## Required demonstration (spec §26)
 | # | Step | Status |
 |---|---|---|
-| 1 | Upload or select sources | ✅ Upload works. Real BHSc sources not available; synthetic outline and review report used |
+| 1 | Upload or select sources | ✅ The three real BHSc sources are imported |
 | 2 | Assign to historical/current contexts | ✅ |
-| 3 | Extract course structure and candidate mappings | ✅ Deterministic extractor verified on synthetic PDFs only |
+| 3 | Extract course structure and candidate mappings | ✅ Deterministic and model-assisted extraction, scored in `evaluation.md` |
 | 4 | Review an inferred relationship | ✅ |
 | 5 | Four-year course map | ✅ |
-| 6 | Select MDSC 407 | ⚠️ Not present in synthetic data. **SYN 407** is the labelled stand-in |
+| 6 | Select MDSC 407 | ✅ In both real versions (Year 3, required), with a documented description from the webpage |
 | 7 | Documented description and unknowns | ✅ |
 | 8 | Preparation relationships with evidence labels | ✅ |
 | 9 | Scenario changing a topic or outcome | ✅ |
 | 10 | Deterministic analysis with dependency paths | ✅ |
 | 11 | Missing evidence shown | ✅ |
-| 12 | Grounded assistant explanation | ❌ Phase 5 (not implemented; AI endpoints return `provider_unconfigured`) |
+| 12 | Grounded assistant explanation | ✅ Verified citations; see [evaluation](evaluation.md) |
 | 13 | Save and reopen scenario | ✅ |
 | 14 | Export a readable report | ✅ HTML and Markdown (PDF not implemented) |
 
 ## Implemented but not verified against real conditions
-- The **extractor's coverage of real UCalgary documents** is unknown. Its patterns follow common outline conventions,
-  and real layouts (tables, multi-column pages, webpage PDFs) may need new patterns or the Phase 5 model route.
+- Extraction quality has been measured on three real documents only. Other layouts (calendar pages, course
+  outlines with tables) are untested.
 - **OCR** works with the local Tesseract. The scanned-page test accepts either OCR text or an "unreadable page"
   review item.
 - **S3** is tested only with moto. No AWS resources were created.
 - **Celery on SQS** is not exercised. The design relies on PostgreSQL job state plus idempotent handlers.
 
-## Not implemented (deferred by agreement)
-- **Phase 5**: ModelGateway adapters (OpenAI Responses, Anthropic Messages), embeddings and hybrid retrieval,
-  assistant panel and tools, structured proposals, cost and rate controls. The spec's model IDs (`gpt-6-luna`,
-  `gpt-6-sol`, `gpt-6-astra`, `claude-sonnet-5`, `claude-opus-5-5`, `text-embedding-3-small`) have **not** been
-  checked against live catalogs or account access.
+## Not implemented
 - **Phase 6**: OIDC/Cognito, AWS infrastructure templates, backup automation, full accessibility audit.
 - Controlled webpage import (URL fetcher), PDF export, entity field edits through review (field conflicts on
   credits and similar fields are recorded but can't be materialized), and a scenario projection cache.

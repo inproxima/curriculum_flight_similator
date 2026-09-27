@@ -13,6 +13,7 @@ import {
   type AnalysisRun,
   type Finding,
 } from "../api/scenarioHooks";
+import { useAiMutations } from "../api/aiHooks";
 import { EvidenceChip } from "../components/Evidence";
 import { useUi } from "../store/ui";
 
@@ -135,6 +136,7 @@ function RunView({ run }: { run: AnalysisRun }) {
         <div className="small">Documented program-outcome coverage (required path): baseline {sum.coverage.baseline.numerator}/{sum.coverage.baseline.denominator} → scenario {sum.coverage.scenario.numerator}/{sum.coverage.scenario.denominator}</div>
       )}
       {sum?.congestion && <div className="small muted">Assessment congestion: {sum.congestion.note}</div>}
+      <ExplainButton runId={run.id} />
       {groups.map(([k, fs]) => fs.length > 0 && (
         <section key={k}>
           <h4>{CLASS_TITLE[k]} ({fs.length})</h4>
@@ -157,6 +159,31 @@ function RunView({ run }: { run: AnalysisRun }) {
           ))}
         </section>
       ))}
+    </div>
+  );
+}
+
+function ExplainButton({ runId }: { runId: string }) {
+  const m = useAiMutations();
+  const [err, setErr] = useState<string | null>(null);
+  const d = m.explain.data;
+  return (
+    <div>
+      <button className="small" disabled={m.explain.isPending} onClick={() => { setErr(null); m.explain.mutate(runId, { onError: (e) => setErr(e instanceof ApiError ? e.message : String(e)) }); }}
+        title="Plain-language explanation by the synthesis model. The deterministic findings below remain authoritative.">
+        {m.explain.isPending ? "Explaining…" : "Explain with AI"}
+      </button>
+      {err && <span className="error small"> {err}</span>}
+      {d && (
+        <div className="card small" style={{ marginTop: 6 }}>
+          <div className="row wrap"><span className="badge inferred">AI explanation</span><span className="badge">{d.meta.model}</span>{d.stale && <span className="badge stale">explains a stale run</span>}</div>
+          <p>{d.summary}</p>
+          <ul>{d.key_points.map((k, i) => <li key={i}>{k.point}</li>)}</ul>
+          {d.judgment_calls.length > 0 && <div><strong>Judgment calls:</strong> {d.judgment_calls.join(" · ")}</div>}
+          {d.missing_information.length > 0 && <div><strong>Missing information:</strong> {d.missing_information.join(" · ")}</div>}
+          <p className="muted">{d.meta.label}</p>
+        </div>
+      )}
     </div>
   );
 }

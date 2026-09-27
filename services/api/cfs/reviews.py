@@ -99,7 +99,7 @@ def decide(
     if decision == "defer":
         item.status = ReviewItemStatus.deferred
     elif decision == "reject":
-        if item.kind == ReviewItemKind.inferred_mapping:
+        if item.kind == ReviewItemKind.inferred_mapping and item.subject_relationship_revision_id:
             assert_draft(db, item.curriculum_version_id)
             rel = db.get(RelationshipRevision, item.subject_relationship_revision_id)
             new = revise_relationship(
@@ -150,6 +150,9 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
     assert_draft(db, cv)
     org = p.org_id
 
+    if kind == ReviewItemKind.inferred_mapping and payload.get("proposal"):
+        return _materialize_proposal(db, p, item, cv, payload)
+
     if kind == ReviewItemKind.inferred_mapping:
         rel = db.get(RelationshipRevision, item.subject_relationship_revision_id)
         new = revise_relationship(db, cv, rel, review_state=ReviewState.accepted, created_by=p.user_id)
@@ -162,6 +165,22 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
     if kind == ReviewItemKind.candidate_entity:
         et = payload["entity_type"]
         span = _uuid(payload.get("span_id"))
+        if et == "program_outcome":
+            e = get_or_create_entity(db, org, EntityType.program_outcome, payload["key"])
+            rev = create_revision(
+                db,
+                e,
+                title=f"{payload['key']}: {payload['label']}",
+                origin=Origin.extracted,
+                created_by=p.user_id,
+                details={"statement_verbatim": payload.get("statement"), "normalized_label": payload["label"][:300]},
+            )
+            set_membership(db, cv, e, rev)
+            if span:
+                add_field_evidence(db, rev, "label", span)
+                if payload.get("statement"):
+                    add_field_evidence(db, rev, "statement", span)
+            return {"entity_id": str(e.id), "statement_documented": bool(payload.get("statement"))}
         if et == "course":
             e = get_or_create_entity(db, org, EntityType.course, payload["code"])
             f = payload.get("fields", {})
@@ -285,6 +304,9 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                     )
             return {"entity_id": str(e.id)}
         raise AppError(f"Unsupported entity type {et}")
+
+    if kind == ReviewItemKind.candidate_relationship and payload.get("type") == "requirement_group":
+        return _install_group(db, p, cv, payload)
 
     if kind == ReviewItemKind.candidate_relationship:
         return _install_rule(
@@ -463,3 +485,84 @@ def _attach_contradicting(
                         note="Conflicting source statement; reviewer kept the other interpretation",
                     )
                 )
+
+
+def _install_group(db: Session, p: Principal, cv: uuid.UUID, payload: dict) -> dict[str, Any]:
+    from cfs.models import RequirementGroup
+    from cfs.models.enums import RequirementGroupKind
+
+    members, missing = [], []
+    for code in payload.get("members", []):
+        e = _member_entity(db, cv, EntityType.course, code)
+        (members.append(e.id) if e else missing.append(code))
+    g = RequirementGroup(
+        organization_id=p.org_id,
+        curriculum_version_id=cv,
+        code=payload["code"][:80],
+        name=payload["name"][:300],
+        kind=RequirementGroupKind.elective_group,
+        min_courses=payload.get("slot_count"),
+        member_entity_ids=members,
+        description=payload.get("rule_text"),
+    )
+    db.add(g)
+    db.flush()
+    return {"requirement_group_id": str(g.id), "members_linked": len(members), "members_not_in_version": missing}
+
+
+def _materialize_proposal(db: Session, p: Principal, item: ReviewItem, cv: uuid.UUID, payload: dict) -> dict:
+    origin = Origin.ai_inferred if payload.get("origin") == "model" else Origin.extracted
+    spans = [(s, EvidenceStance.supporting) for s in item.evidence_span_ids]
+    kind = payload["proposal"]
+    if kind == "inferred_preparation":
+        tgt = _member_entity(db, cv, EntityType.course, payload["target"])
+        if tgt is None:
+            raise Conflict(f"{payload['target']} is not in this curriculum version.")
+        sources = payload.get("sources") or []
+        if not sources:
+            raise AppError(
+                "The source text does not name the earlier courses. Edit the item to choose them "
+                "(edited_payload.sources = [course codes]).",
+                code="choose_sources",
+            )
+        made, missing = [], []
+        for code in sources:
+            src = _member_entity(db, cv, EntityType.course, code)
+            if src is None:
+                missing.append(code)
+                continue
+            r = create_relationship(
+                db,
+                p.org_id,
+                cv,
+                src.id,
+                tgt.id,
+                RelType.inferred_preparation,
+                origin=origin,
+                basis=EvidenceBasis.interpretation,
+                review=ReviewState.accepted,
+                rationale=f"Source describes: “{payload.get('described', '')}”",
+                evidence=spans,
+                created_by=p.user_id,
+            )
+            made.append(str(r.id))
+        return {"relationships": made, "not_in_version": missing, "evidence_basis": "interpretation"}
+    if kind == "course_contributes_to":
+        c = db.get(Entity, uuid.UUID(payload["course_id"]))
+        plo = db.get(Entity, uuid.UUID(payload["plo_id"]))
+        r = create_relationship(
+            db,
+            p.org_id,
+            cv,
+            c.id,
+            plo.id,
+            RelType.contributes_to,
+            origin=origin,
+            basis=EvidenceBasis.interpretation,
+            review=ReviewState.accepted,
+            rationale=payload.get("rationale"),
+            evidence=spans,
+            created_by=p.user_id,
+        )
+        return {"relationship_revision_id": str(r.id), "evidence_basis": "interpretation"}
+    raise AppError(f"Unknown proposal type {kind}")

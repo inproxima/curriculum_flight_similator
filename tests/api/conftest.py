@@ -15,6 +15,10 @@ os.environ.setdefault("CFS_ENV", "test")
 os.environ.setdefault("CFS_DATABASE_URL", "postgresql+psycopg://cfs:cfs@localhost:5433/cfs_test")
 os.environ["CFS_TASK_ALWAYS_EAGER"] = "true"
 os.environ.setdefault("CFS_STORAGE_ROOT", tempfile.mkdtemp(prefix="cfs-test-objects-"))
+# Tests never contact real providers: fake keys, adapters are monkeypatched in test_ai.py, embeddings off.
+os.environ["CFS_OPENAI_API_KEY"] = "test-openai-key"
+os.environ["CFS_ANTHROPIC_API_KEY"] = "test-anthropic-key"
+os.environ["CFS_AI_EMBEDDINGS_ENABLED"] = "false"
 
 import pathlib  # noqa: E402
 

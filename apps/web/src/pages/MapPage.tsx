@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { getJson } from "../api/client";
 import { useGraph } from "../api/hooks";
 import type { GraphView } from "../api/types";
+import { AssistantPanel } from "../components/AssistantPanel";
 import { DetailsPanel } from "../components/DetailsPanel";
 import { LeftPanel } from "../components/LeftPanel";
 import { CurriculumMap } from "../map/CurriculumMap";
@@ -23,7 +24,7 @@ export function evidenceRatio(view: GraphView | undefined): number | null {
 }
 
 export function MapPage() {
-  const { versionId, scenarioId, selection } = useUi();
+  const { versionId, scenarioId, assistantOpen } = useUi();
   const graph = useGraphForUi();
   const qc = useQueryClient();
 
@@ -48,7 +49,7 @@ export function MapPage() {
   }, [versionId, viewName, scenarioId, qc]);
 
   return (
-    <div className={`workspace ${selection ? "" : ""}`}>
+    <div className={`workspace ${assistantOpen ? "with-assistant" : ""}`}>
       <LeftPanel />
       <main className="center" aria-label="Curriculum map">
         {graph.error && <div className="map-notice error card">Could not load graph: {String(graph.error)}</div>}
@@ -64,6 +65,7 @@ export function MapPage() {
       <aside className="panel right" aria-label="Details">
         <DetailsPanel />
       </aside>
+      {assistantOpen && <AssistantPanel />}
     </div>
   );
 }

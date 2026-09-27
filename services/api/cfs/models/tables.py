@@ -176,6 +176,8 @@ class DocumentVersion(Base):
     )
     page_count: Mapped[int | None] = mapped_column(Integer)
     is_synthetic: Mapped[bool] = mapped_column(Boolean, default=False)
+    # None = any allowlisted provider may receive excerpts; [] = never send to a model; or an explicit list.
+    ai_providers: Mapped[list | None] = mapped_column(JSONB)
     uploaded_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = ts_now()
     document: Mapped[Document] = relationship(back_populates="versions")
@@ -653,6 +655,11 @@ class ModelRun(Base):
     evidence_ids: Mapped[list] = mapped_column(JSONB, default=list)
     job_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     error: Mapped[str | None] = mapped_column(Text)
+    output: Mapped[dict | None] = mapped_column(JSONB)  # normalized output, reused for cache hits
+    duration_ms: Mapped[int | None] = mapped_column(Integer)
+    fallback_from: Mapped[str | None] = mapped_column(String(120))
+    cached_input_tokens: Mapped[int | None] = mapped_column(Integer)
+    purpose: Mapped[str | None] = mapped_column(String(120))
     created_at: Mapped[datetime] = ts_now()
 
 
@@ -721,6 +728,7 @@ class ReviewItem(Base):
         ForeignKey("relationship_revisions.id", ondelete="SET NULL")
     )
     dedupe_key: Mapped[str | None] = mapped_column(String(300), unique=True)
+    model_run_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)  # set when a model proposed this item
     created_at: Mapped[datetime] = ts_now()
 
 

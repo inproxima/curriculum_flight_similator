@@ -106,6 +106,122 @@ def _attach_rel(
     return n
 
 
+AUTHORITY_RANK = {"authoritative": 3, "supporting": 2, "historical_reference": 1, "exploratory": 0}
+
+
+def _source_ref(dv: DocumentVersion, src: CurriculumSource, c: dict) -> dict:
+    return {
+        "document_version_id": str(dv.id),
+        "authority": src.authority.value,
+        "origin": c.get("origin", "deterministic"),
+        "span_id": c.get("span_id"),
+    }
+
+
+def _open_item(db: Session, cv: uuid.UUID, key_prefix: str):
+    from cfs.models import ReviewItem
+    from cfs.models.enums import ReviewItemStatus
+
+    return db.scalar(
+        select(ReviewItem)
+        .where(
+            ReviewItem.curriculum_version_id == cv,
+            ReviewItem.dedupe_key.like(f"{key_prefix}{cv}:%"),
+            ReviewItem.status.in_([ReviewItemStatus.open, ReviewItemStatus.deferred]),
+        )
+        .order_by(ReviewItem.created_at)
+    )
+
+
+def _merge_open(
+    db: Session, cv: uuid.UUID, key_prefix: str, c: dict, src: CurriculumSource, dv: DocumentVersion
+) -> bool:
+    """Fold a candidate from another document (or extractor) into the open review item for the same thing.
+
+    Higher-authority sources win field values; disagreements are kept in `field_conflicts` for the reviewer.
+    """
+    it = _open_item(db, cv, key_prefix)
+    if it is None:
+        return False
+    p = dict(it.payload)
+    sources = list(p.get("sources", []))
+    if any(
+        x["document_version_id"] == str(dv.id) and x.get("origin") == c.get("origin", "deterministic") for x in sources
+    ):
+        return True  # same document and extractor already merged (idempotent re-run)
+    new_rank = AUTHORITY_RANK.get(src.authority.value, 0)
+    old_rank = max(
+        (AUTHORITY_RANK.get(x["authority"], 0) for x in sources),
+        default=AUTHORITY_RANK.get(p.get("authority", "exploratory"), 0),
+    )
+    sources.append(_source_ref(dv, src, c))
+    p["sources"] = sources
+    spans = [x for x in [c.get("span_id")] + [f.get("span_id") for f in c.get("fields", {}).values()] if x]
+    if c["kind"] == "course":
+        if (
+            c.get("title")
+            and c["title"] != c["code"]
+            and (p.get("title") in (None, p.get("code")) or (c.get("origin") == "model" and new_rank >= old_rank))
+        ):
+            p["title"] = c["title"]
+        fields = dict(p.get("fields", {}))
+        conflicts = list(p.get("field_conflicts", []))
+        for name, f in c.get("fields", {}).items():
+            cur = fields.get(name)
+            if cur is None:
+                fields[name] = {**f, "authority": src.authority.value}
+            elif str(cur.get("value")).lower() != str(f.get("value")).lower():
+                conflicts.append(
+                    {
+                        "field": name,
+                        "kept": cur.get("value"),
+                        "other": f.get("value"),
+                        "other_document_version_id": str(dv.id),
+                        "other_authority": src.authority.value,
+                    }
+                )
+                if new_rank > old_rank:
+                    conflicts[-1].update({"kept": f.get("value"), "other": cur.get("value")})
+                    fields[name] = {**f, "authority": src.authority.value}
+        p["fields"] = fields
+        p["field_conflicts"] = conflicts
+        it.title = f"New course found: {p['code']} {p.get('title') or ''}".strip()
+    elif c["kind"] == "option_group":
+        p["members"] = sorted(set(p.get("members", [])) | set(c.get("members", [])))
+    it.payload = p
+    it.evidence_span_ids = list(dict.fromkeys(list(it.evidence_span_ids) + [uuid.UUID(x) for x in spans]))
+    return True
+
+
+def _close_mentions(db: Session, cv: uuid.UUID, code: str, dv: DocumentVersion) -> None:
+    from cfs.models import ReviewDecision, ReviewItem
+    from cfs.models.enums import ReviewItemKind, ReviewItemStatus
+
+    for it in db.scalars(
+        select(ReviewItem).where(
+            ReviewItem.curriculum_version_id == cv,
+            ReviewItem.kind == ReviewItemKind.uncertain_course_match,
+            ReviewItem.status == ReviewItemStatus.open,
+            ReviewItem.dedupe_key.like(f"mention:{code}:{cv}:%"),
+        )
+    ):
+        it.status = ReviewItemStatus.accepted
+        db.add(
+            ReviewDecision(
+                review_item_id=it.id,
+                decision=ReviewItemStatus.accepted,
+                rationale=f"Superseded automatically: a course candidate for {code} was extracted "
+                f"from document version {dv.id}.",
+            )
+        )
+
+
+def _slug(s: str) -> str:
+    import re
+
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")[:80]
+
+
 def _canon(expr: dict) -> str:
     return render(parse_expr(expr))
 
@@ -122,6 +238,8 @@ def resolve_candidates(
         )
     )
 
+    cand_ctx: dict = {}
+
     def item(
         kind: ReviewItemKind,
         title: str,
@@ -136,10 +254,16 @@ def resolve_candidates(
             kind=kind,
             title=title,
             dedupe_key=f"{key}:{cv}:{dv.id}",
-            payload=payload,
-            detail=detail,
+            payload={**payload, "origin": cand_ctx.get("origin", "deterministic")},
+            detail=(detail or "")
+            + (
+                " Proposed by the extraction model; its quote was verified against the source text."
+                if cand_ctx.get("origin") == "model"
+                else ""
+            ),
             evidence_span_ids=[uuid.UUID(s) for s in span_ids if s],
             subject_entity_id=subject,
+            model_run_id=uuid.UUID(cand_ctx["model_run_id"]) if cand_ctx.get("model_run_id") else None,
             **base,
         )
         if created:
@@ -148,9 +272,15 @@ def resolve_candidates(
                 stats["conflicts"] += 1
 
     for c in candidates:
+        cand_ctx.clear()
+        cand_ctx.update(c)
         if c["kind"] == "course":
             ent, rev = _member(db, cv, org, EntityType.course, c["code"])
+            if ent is None and _merge_open(db, cv, f"course:{c['code']}:", c, src, dv):
+                stats["merged"] = stats.get("merged", 0) + 1
+                continue
             if ent is None:
+                _close_mentions(db, cv, c["code"], dv)
                 item(
                     ReviewItemKind.candidate_entity,
                     f"New course found: {c['code']} {c['title']}",
@@ -161,8 +291,10 @@ def resolve_candidates(
                         "fields": c["fields"],
                         "span_id": c["span_id"],
                         "authority": src.authority.value,
+                        "sources": [_source_ref(dv, src, c)],
+                        "field_conflicts": [],
                     },
-                    [c["span_id"]],
+                    [c["span_id"]] + [f.get("span_id") for f in c["fields"].values()],
                     detail="Accepting adds the course to this curriculum version with only the "
                     "documented fields; unknown fields remain unknown.",
                 )
@@ -344,8 +476,73 @@ def resolve_candidates(
                     stats["evidence_attached"] += _attach_rel(
                         db, cv, c["span_id"], rel_types={RelType.assesses}, source=ent.id, target=oent.id
                     )
+        elif c["kind"] == "program_outcome":
+            key = f"PLO{c['number']}" if c.get("number") else _slug(c["label"])
+            ent, _rev = _member(db, cv, org, EntityType.program_outcome, key)
+            if ent is None:
+                item(
+                    ReviewItemKind.candidate_entity,
+                    f"Program learning outcome: {key} {c['label']}",
+                    f"plo:{key}",
+                    {
+                        "entity_type": "program_outcome",
+                        "key": key,
+                        "label": c["label"],
+                        "statement": c.get("statement"),
+                        "span_id": c.get("span_id"),
+                    },
+                    [c.get("span_id")],
+                    detail=(
+                        "Only a heading is documented; no full outcome statement." if not c.get("statement") else None
+                    ),
+                )
+            else:
+                stats["matched"] += 1
+        elif c["kind"] == "option_group":
+            code = _slug(f"{c['name']}-y{c['year']}" if c.get("year") else c["name"])
+            if _merge_open(db, cv, f"group:{code}:", c, src, dv):
+                stats["merged"] = stats.get("merged", 0) + 1
+                continue
+            item(
+                ReviewItemKind.candidate_relationship,
+                f"Option rule: {c['name']}"
+                + (f" (Year {c['year']}, {c['slot_count']} slot(s))" if c.get("year") else ""),
+                f"group:{code}",
+                {
+                    "type": "requirement_group",
+                    "code": code,
+                    "name": c["name"],
+                    "year": c.get("year"),
+                    "slot_count": c.get("slot_count"),
+                    "members": c.get("members", []),
+                    "rule_text": c["quote"],
+                    "span_id": c.get("span_id"),
+                },
+                [c.get("span_id")],
+                detail="Elective/option rule as documented. Members not in this version are kept as text only.",
+            )
+        elif c["kind"] == "preparation":
+            tgt, _ = _member(db, cv, org, EntityType.course, c["target"])
+            sources = [s for s in c.get("sources", []) if s != c["target"]]
+            item(
+                ReviewItemKind.inferred_mapping,
+                f"Stated preparation for {c['target']}: {c['described'][:80]}",
+                f"prep:{c['target']}:{','.join(sorted(sources))}",
+                {
+                    "proposal": "inferred_preparation",
+                    "target": c["target"],
+                    "sources": sources,
+                    "described": c["described"],
+                    "quote": c["quote"],
+                    "span_id": c.get("span_id"),
+                },
+                [c.get("span_id")],
+                subject=tgt.id if tgt else None,
+                detail="The source describes expected earlier learning without naming a formal prerequisite. "
+                "Which courses provide it is an interpretation; accepting keeps it labelled inferred.",
+            )
         elif c["kind"] == "mention":
-            if c["code"] in known_codes:
+            if c["code"] in known_codes or _open_item(db, cv, f"course:{c['code']}:"):
                 continue
             similar = difflib.get_close_matches(c["code"], list(known_codes), n=3, cutoff=0.8)
             item(
