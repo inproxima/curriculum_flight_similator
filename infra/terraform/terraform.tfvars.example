@@ -1,0 +1,16 @@
+# Copy to <env>.tfvars. Review costs before applying (see docs/deployment.md).
+region                   = "ca-central-1"
+environment              = "staging"
+image_tag                = "REPLACE_WITH_GIT_SHA"
+db_instance_class        = "db.t4g.small"
+db_multi_az              = false
+api_desired_count        = 2
+worker_desired_count     = 1
+create_cognito           = true
+# domain_name              = "cfs.example.ca"
+# cloudfront_certificate_arn = "arn:aws:acm:us-east-1:...:certificate/..."
+# alb_certificate_arn      = "arn:aws:acm:ca-central-1:...:certificate/..."
+alarm_email              = ""
+ai_provider_allowlist    = "openai,anthropic"
+ai_monthly_budget_usd    = 50
+fetch_allowed_domains    = "ucalgary.ca"

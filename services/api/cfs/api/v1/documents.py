@@ -10,6 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import Response, StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -81,6 +82,9 @@ async def upload_document(
     from cfs.core.config import get_settings
 
     p.require(Role.editor)
+    from cfs.core.security import limit_upload
+
+    limit_upload(p)
     limit = get_settings().max_upload_bytes
     if file is not None:
         data = await file.read(limit + 1)
@@ -103,6 +107,61 @@ async def upload_document(
         academic_year=academic_year,
         cohort_applicability=cohort_applicability,
         document_id=document_id,
+    )
+    db.commit()
+    if job is not None:
+        enqueue(job.id)
+    db.refresh(dv)
+    return UploadResult(
+        document_version=DocumentVersionOut.model_validate(dv), duplicate=not created, job_id=job.id if job else None
+    )
+
+
+class FetchIn(BaseModel):
+    url: str
+    title: str | None = None
+    academic_year: str | None = None
+    cohort_applicability: str | None = None
+
+
+@router.post("/documents/fetch", response_model=UploadResult, status_code=201, tags=["documents"])
+def fetch_document(body: FetchIn, db: Session = Depends(get_db), p: Principal = Depends(get_principal)):
+    """Import a public webpage or PDF through the controlled fetcher (allowlisted domains, no internal
+    addresses, re-validated redirects, size/time limits). HTML is stored as extracted text."""
+    from datetime import date
+
+    from cfs.core.security import limit_upload
+    from cfs.ingest.fetch import fetch, html_to_text
+
+    p.require(Role.editor)
+    limit_upload(p)
+    f = fetch(body.url)
+    if f.content_type in ("text/html", "application/xhtml+xml"):
+        text, page_title = html_to_text(f.data.decode("utf-8", errors="replace"), f.final_url)
+        data, name, dtype = text.encode("utf-8"), "webpage.txt", DocumentType.webpage_extract
+    else:
+        data, page_title = f.data, None
+        name = "download.pdf" if f.content_type == "application/pdf" else "download.txt"
+        dtype = DocumentType.other
+    dv, job, created = store_upload(
+        db,
+        p,
+        data,
+        filename=name,
+        title=body.title or page_title or f.final_url,
+        document_type=dtype,
+        source_url=f.final_url,
+        retrieval_date=date.today(),
+        academic_year=body.academic_year,
+        cohort_applicability=body.cohort_applicability,
+    )
+    audit(
+        db,
+        p,
+        "document.fetched",
+        "document_version",
+        dv.id,
+        {"url": body.url, "final_url": f.final_url, "redirects": f.redirects, "content_type": f.content_type},
     )
     db.commit()
     if job is not None:
@@ -268,9 +327,25 @@ def list_job_events(
     ).all()
 
 
+def _stream_principal(
+    job_id: uuid.UUID, request: Request, st: str | None = None, db: Session = Depends(get_db)
+) -> Principal:
+    """EventSource cannot send Authorization headers: accept a short-lived stream token (?st=) instead."""
+    from cfs.core.config import get_settings
+    from cfs.core.oidc import verify_stream_token
+
+    if st:
+        return verify_stream_token(st, job_id)
+    if get_settings().auth_mode == "oidc":
+        from cfs.core.oidc import Unauthorized
+
+        raise Unauthorized("Stream token required")
+    return get_principal(request, db, None, None)
+
+
 @router.get("/jobs/{job_id}/stream", tags=["jobs"])
 async def stream_job(
-    job_id: uuid.UUID, request: Request, db: Session = Depends(get_db), p: Principal = Depends(get_principal)
+    job_id: uuid.UUID, request: Request, db: Session = Depends(get_db), p: Principal = Depends(_stream_principal)
 ):
     """Server-sent events. Progress is persisted, so clients can reconnect with Last-Event-ID."""
     get_scoped(db, Job, job_id, p, "Job")

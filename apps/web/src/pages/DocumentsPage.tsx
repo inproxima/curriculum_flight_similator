@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ApiError, getJson } from "../api/client";
 import { useAiMutations, useAiStatus } from "../api/aiHooks";
 import { useDocuments, useJobs, usePrograms, useVersionSources, useVersions, type DocumentVersionOut, type Job } from "../api/hooks";
+import { openJobStream } from "../lib/auth";
 import { useUi } from "../store/ui";
 
 const DOC_TYPES = ["program_outline", "review_report", "webpage_extract", "course_outline", "assessment_document", "pasted_text", "other"];
@@ -24,6 +25,7 @@ export function DocumentsPage() {
     <div className="page" style={{ display: "grid", gridTemplateColumns: "minmax(420px, 1fr) minmax(360px, 1fr)", gap: 16 }}>
       <div>
         <ProgramVersionForms />
+        <FetchForm onFetched={(jobId) => { setLastJob(jobId); qc.invalidateQueries({ queryKey: ["documents"] }); }} />
         <UploadForm onUploaded={(jobId) => { setLastJob(jobId); qc.invalidateQueries({ queryKey: ["documents"] }); }} />
         {lastJob && <JobProgress jobId={lastJob} />}
         <h2 style={{ marginTop: 16 }}>Sources assigned to the selected version</h2>
@@ -169,19 +171,24 @@ export function JobProgress({ jobId }: { jobId: string }) {
   const qc = useQueryClient();
   useEffect(() => {
     setEvents([]);
-    const es = new EventSource(`/api/v1/jobs/${jobId}/stream`);
+    let es: EventSource | null = null;
+    let closed = false;
+    openJobStream(jobId).then((stream) => {
+      if (closed) { stream.close(); return; }
+      es = stream;
     es.addEventListener("job", (ev) => {
       const d = JSON.parse((ev as MessageEvent).data);
       setEvents((xs) => (xs.some((x) => x.id === d.id) ? xs : [...xs, d]));
       setJob(d.job);
     });
     es.addEventListener("end", () => {
-      es.close();
+      es?.close();
       qc.invalidateQueries({ queryKey: ["documents"] });
       qc.invalidateQueries({ queryKey: ["reviews"] });
       qc.invalidateQueries({ queryKey: ["jobs"] });
     });
-    return () => es.close();
+    });
+    return () => { closed = true; es?.close(); };
   }, [jobId, qc]);
   return (
     <div className="card" aria-live="polite">
@@ -301,5 +308,37 @@ function ProgramVersionForms() {
       {mapJob && <JobProgress jobId={mapJob} />}
       {msg && <p className="small">{msg}</p>}
     </details>
+  );
+}
+
+function FetchForm({ onFetched }: { onFetched: (jobId: string | null) => void }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <form className="card row wrap" style={{ marginBottom: 12 }} aria-label="Import a webpage" onSubmit={async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.currentTarget);
+      setBusy(true);
+      setMsg(null);
+      try {
+        const r = await getJson<{ duplicate: boolean; job_id: string | null }>("/api/v1/documents/fetch", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: f.get("url"), academic_year: f.get("academic_year") || null }),
+        });
+        setMsg(r.duplicate ? "Already imported (same content)." : "Imported; processing started.");
+        onFetched(r.job_id);
+      } catch (err) {
+        setMsg(err instanceof ApiError ? err.message : String(err));
+      } finally {
+        setBusy(false);
+      }
+    }}>
+      <strong className="small">Import a public webpage or PDF</strong>
+      <input type="url" name="url" required placeholder="https://…" aria-label="URL" style={{ minWidth: 280 }} />
+      <input type="text" name="academic_year" placeholder="Academic year" aria-label="Academic year for import" style={{ width: 110 }} />
+      <button className="small" disabled={busy}>{busy ? "Fetching…" : "Import"}</button>
+      <span className="muted small" style={{ width: "100%" }}>Only allowlisted public domains are fetched. Internal addresses are refused, and each redirect is re-checked. The page is stored as text with its URL and retrieval date.</span>
+      {msg && <span className="small">{msg}</span>}
+    </form>
   );
 }

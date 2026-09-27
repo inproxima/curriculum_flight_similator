@@ -19,6 +19,7 @@ from cfs.core.db import get_db
 from cfs.core.errors import AppError
 from cfs.core.jobs import create_job, enqueue
 from cfs.core.scope import get_scoped
+from cfs.core.security import limit_ai
 from cfs.models import (
     AnalysisRun,
     Conversation,
@@ -153,6 +154,7 @@ def set_policy(
 @router.post("/document-versions/{dv_id}/ai-extract", status_code=202)
 def ai_extract(dv_id: uuid.UUID, p: Principal = Depends(get_principal), db: Session = Depends(get_db)):
     """Model-assisted extraction. Sends this document's extracted text to the `extract` route's provider."""
+    limit_ai(p)
     p.require(Role.editor)
     _require_ai("extract")
     dv = get_scoped(db, DocumentVersion, dv_id, p, "Document version")
@@ -169,6 +171,7 @@ def ai_extract(dv_id: uuid.UUID, p: Principal = Depends(get_principal), db: Sess
 
 @router.post("/versions/{version_id}/ai-mappings", status_code=202)
 def ai_mappings(version_id: uuid.UUID, p: Principal = Depends(get_principal), db: Session = Depends(get_db)):
+    limit_ai(p)
     p.require(Role.editor)
     _require_ai("synthesize")
     get_scoped(db, CurriculumVersion, version_id, p, "Curriculum version")
@@ -249,6 +252,7 @@ def post_message(cid: uuid.UUID, body: MessageIn, p: Principal = Depends(get_pri
 
     c = get_scoped(db, Conversation, cid, p, "Conversation")
     _require_ai(MODE_ROUTE[body.mode])
+    limit_ai(p)
     if not body.text.strip() or len(body.text) > 4000:
         raise AppError("Message must be 1–4000 characters", code="invalid_message")
     m = Message(conversation_id=c.id, role="user", content={"text": body.text, "mode": body.mode})
@@ -270,6 +274,7 @@ def post_message(cid: uuid.UUID, body: MessageIn, p: Principal = Depends(get_pri
 
 @router.post("/messages/{mid}/critique", status_code=202)
 def critique(mid: uuid.UUID, p: Principal = Depends(get_principal), db: Session = Depends(get_db)):
+    limit_ai(p)
     m = db.get(Message, mid)
     if m is None:
         raise AppError("Message not found", status=404, code="not_found")
@@ -285,6 +290,7 @@ def critique(mid: uuid.UUID, p: Principal = Depends(get_principal), db: Session 
 
 @router.post("/analyses/{run_id}/explain")
 def explain(run_id: uuid.UUID, p: Principal = Depends(get_principal), db: Session = Depends(get_db)):
+    limit_ai(p)
     from cfs.ai.assistant import explain_run
 
     run = get_scoped(db, AnalysisRun, run_id, p, "Analysis run")

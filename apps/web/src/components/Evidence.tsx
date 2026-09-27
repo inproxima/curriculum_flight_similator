@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import { useSpan } from "../api/hooks";
+import { authHeaders } from "../lib/auth";
 import { useUi } from "../store/ui";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
@@ -55,6 +56,7 @@ export function SourceViewer() {
   }, [span, page]);
 
   const fileUrl = span ? `/api/v1/document-versions/${span.document_version_id}/file` : null;
+  const fileMemo = useMemo(() => (fileUrl ? { url: fileUrl, httpHeaders: authHeaders() } : null), [fileUrl]);
   const scale = pageSize ? width / pageSize.w : 1;
   const boxes = useMemo(() => (span && page === span.page_number ? ((span.bbox as number[][] | null) ?? []) : []), [span, page]);
 
@@ -89,7 +91,7 @@ export function SourceViewer() {
             )}
             {fileUrl && isPdf && (
               <Document
-                file={fileUrl}
+                file={fileMemo}
                 onLoadSuccess={(d) => setNumPages(d.numPages)}
                 error={
                   <div>

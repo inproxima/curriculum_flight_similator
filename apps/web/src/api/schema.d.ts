@@ -4,6 +4,43 @@
  */
 
 export interface paths {
+    "/api/v1/admin/memberships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Members */
+        get: operations["list_members_api_v1_admin_memberships_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/memberships/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Role
+         * @description Set a member's role. Note: when the IdP sends group claims, those override this at the user's next request.
+         */
+        put: operations["set_role_api_v1_admin_memberships__user_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/runs/{run_id}": {
         parameters: {
             query?: never;
@@ -83,6 +120,26 @@ export interface paths {
         put?: never;
         /** Explain */
         post: operations["explain_api_v1_analyses__run_id__explain_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Auth Config
+         * @description Public: what the browser needs to start sign-in. Contains no secrets.
+         */
+        get: operations["auth_config_api_v1_auth_config_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -259,6 +316,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents/fetch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fetch Document
+         * @description Import a public webpage or PDF through the controlled fetcher (allowlisted domains, no internal
+         *     addresses, re-validated redirects, size/time limits). HTML is stored as extracted text.
+         */
+        post: operations["fetch_document_api_v1_documents_fetch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/entities/{entity_id}/versions": {
         parameters: {
             query?: never;
@@ -427,6 +505,43 @@ export interface paths {
          * @description Server-sent events. Progress is persisted, so clients can reconnect with Last-Event-ID.
          */
         get: operations["stream_job_api_v1_jobs__job_id__stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/stream-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stream Token
+         * @description Short-lived (5 min) token for EventSource, which cannot send Authorization headers.
+         */
+        post: operations["stream_token_api_v1_jobs__job_id__stream_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Me */
+        get: operations["me_api_v1_me_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1269,6 +1384,17 @@ export interface components {
             /** Retrieval Date */
             retrieval_date?: string | null;
         };
+        /** FetchIn */
+        FetchIn: {
+            /** Academic Year */
+            academic_year?: string | null;
+            /** Cohort Applicability */
+            cohort_applicability?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Url */
+            url: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1504,6 +1630,14 @@ export interface components {
             subject_relationship_revision_id: string | null;
             /** Title */
             title: string;
+        };
+        /** RoleIn */
+        RoleIn: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "editor" | "reviewer" | "viewer";
         };
         /** SavedViewIn */
         SavedViewIn: {
@@ -1742,11 +1876,84 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_members_api_v1_admin_memberships_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_role_api_v1_admin_memberships__user_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     model_run_api_v1_ai_runs__run_id__get: {
         parameters: {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 run_id: string;
@@ -1780,6 +1987,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1813,6 +2021,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1846,6 +2055,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 run_id: string;
@@ -1879,6 +2089,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 run_id: string;
@@ -1907,6 +2118,28 @@ export interface operations {
             };
         };
     };
+    auth_config_api_v1_auth_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     list_conversations_api_v1_conversations_get: {
         parameters: {
             query?: {
@@ -1914,6 +2147,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1945,6 +2179,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1980,6 +2215,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 cid: string;
@@ -2013,6 +2249,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 cid: string;
@@ -2050,6 +2287,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 dv_id: string;
@@ -2083,6 +2321,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 dv_id: string;
@@ -2120,6 +2359,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 dv_id: string;
@@ -2153,6 +2393,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 dv_id: string;
@@ -2190,6 +2431,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 dv_id: string;
@@ -2225,6 +2467,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 dv_id: string;
@@ -2258,6 +2501,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 dv_id: string;
@@ -2291,6 +2535,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 dv_id: string;
@@ -2328,6 +2573,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2359,6 +2605,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2389,11 +2636,48 @@ export interface operations {
             };
         };
     };
+    fetch_document_api_v1_documents_fetch_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FetchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     entity_across_versions_api_v1_entities__entity_id__versions_get: {
         parameters: {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 entity_id: string;
@@ -2429,6 +2713,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2464,6 +2749,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 span_id: string;
@@ -2522,6 +2808,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2553,6 +2840,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 job_id: string;
@@ -2586,6 +2874,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 job_id: string;
@@ -2621,6 +2910,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 job_id: string;
@@ -2654,6 +2944,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 job_id: string;
@@ -2684,10 +2975,10 @@ export interface operations {
     };
     stream_job_api_v1_jobs__job_id__stream_get: {
         parameters: {
-            query?: never;
-            header?: {
-                "x-cfs-user"?: string | null;
+            query?: {
+                st?: string | null;
             };
+            header?: never;
             path: {
                 job_id: string;
             };
@@ -2715,11 +3006,82 @@ export interface operations {
             };
         };
     };
+    stream_token_api_v1_jobs__job_id__stream_token_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_api_v1_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     critique_api_v1_messages__mid__critique_post: {
         parameters: {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 mid: string;
@@ -2753,6 +3115,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2784,6 +3147,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2819,6 +3183,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 program_id: string;
@@ -2852,6 +3217,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 program_id: string;
@@ -2885,6 +3251,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 program_id: string;
@@ -2918,6 +3285,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 program_id: string;
@@ -2983,6 +3351,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3014,6 +3383,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3049,6 +3419,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 item_id: string;
@@ -3088,6 +3459,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3121,6 +3493,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3156,6 +3529,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3190,6 +3564,7 @@ export interface operations {
             header?: {
                 "if-match"?: string | null;
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3227,6 +3602,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3262,6 +3638,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3295,6 +3672,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3329,6 +3707,7 @@ export interface operations {
             header?: {
                 "if-match"?: string | null;
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3370,6 +3749,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3403,6 +3783,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3439,6 +3820,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3475,6 +3857,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3511,6 +3894,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3550,6 +3934,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3587,6 +3972,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3621,6 +4007,7 @@ export interface operations {
             header?: {
                 "if-match"?: string | null;
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3659,6 +4046,7 @@ export interface operations {
             header?: {
                 "if-match"?: string | null;
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3697,6 +4085,7 @@ export interface operations {
             header?: {
                 "if-match"?: string | null;
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3730,6 +4119,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3765,6 +4155,7 @@ export interface operations {
             header?: {
                 "if-match"?: string | null;
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 sid: string;
@@ -3798,6 +4189,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -3831,6 +4223,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -3864,6 +4257,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -3901,6 +4295,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -3936,6 +4331,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -3974,6 +4370,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4013,6 +4410,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4056,6 +4454,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4093,6 +4492,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4130,6 +4530,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4165,6 +4566,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4204,6 +4606,7 @@ export interface operations {
             };
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4239,6 +4642,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4274,6 +4678,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4309,6 +4714,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;
@@ -4342,6 +4748,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-cfs-user"?: string | null;
+                authorization?: string | null;
             };
             path: {
                 version_id: string;

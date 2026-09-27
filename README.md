@@ -11,9 +11,18 @@ mastered.
 > invented test data, labelled throughout the UI and in exports. "Biomedical Sciences (BHSc)" is imported from real
 > University of Calgary documents in `outputs/` (2025–26 outline, program webpage extraction, 2019 review).
 
-Status: Phases 1–5 (environment, ingestion and evidence, map and analysis, scenarios, AI assistance) are
-implemented and tested. AWS deployment (Phase 6) is **not implemented**. See
-[docs/implementation-report.md](docs/implementation-report.md) and [docs/evaluation.md](docs/evaluation.md).
+Status: all six phases are implemented and tested locally:
+
+1. Environment
+2. Ingestion and evidence
+3. Map and analysis
+4. Scenarios
+5. AI assistance
+6. Security, accessibility, CI, and AWS infrastructure definitions
+
+The AWS infrastructure is validated but has **not been applied**; nothing runs in AWS yet. See
+[docs/implementation-report.md](docs/implementation-report.md), [docs/deployment.md](docs/deployment.md),
+[docs/operations.md](docs/operations.md), and [docs/evaluation.md](docs/evaluation.md).
 
 ## Quick start (Docker)
 Requirements: Docker Desktop. On macOS, the repository folder must be shared with Docker (Settings → Resources →
@@ -95,14 +104,48 @@ documents to the provider shown for its route (see **AI & usage**).
 Without keys, the map, evidence, review, and deterministic analysis all still work, and AI actions report that the
 provider is unconfigured.
 
+## Sign-in and security
+- **Local development** uses single-user mode (localhost only). With `CFS_ENV=production` the app refuses to
+  start unless all of these hold:
+  - OIDC is configured;
+  - a strong `CFS_SECRET_KEY` is set;
+  - storage is S3;
+  - CORS has no localhost origins.
+- **OIDC** (Cognito or an institutional IdP): the SPA signs in with Authorization Code + PKCE. The API verifies
+  tokens against the issuer's keys. Groups `cfs-admin`, `cfs-editor`, `cfs-reviewer` and `cfs-viewer` map to
+  roles, and users without one are denied.
+- **Webpage import** (Documents page):
+  - Only allowlisted public domains (`CFS_FETCH_ALLOWED_DOMAINS`).
+  - Internal and metadata addresses are refused, and each redirect is re-checked.
+  - Downloads are size- and time-limited, and HTML is stored as text.
+- **Other protections:** security headers on every response, per-user rate limits for uploads and AI actions, and
+  an audit trail for reviews, publishing, fetches, AI actions and role changes.
+
+## AWS deployment
+Terraform in [`infra/terraform`](infra/terraform) defines the AWS stack:
+
+- **Web:** CloudFront serves the SPA from private S3 and routes `/api/*` to an ALB.
+- **Compute:** ECS Fargate for the API, worker, and migration task.
+- **Data:** RDS PostgreSQL 16 with pgvector, S3 for documents, SQS for jobs.
+- **Platform:** Secrets Manager, optional Cognito, and CloudWatch alarms.
+
+Follow [docs/deployment.md](docs/deployment.md), including the cost notes. `scripts/deploy.sh <env>` builds,
+migrates, rolls out, and publishes.
+
 ## Tests
 ```bash
 make test-api   # pytest (uses the cfs_test database; jobs inline)
 make test-web   # vitest
-make e2e        # Playwright against a running stack (make up + seed)
+make e2e        # Playwright against a running stack (make up + seed); includes axe WCAG 2.1 AA scans
 cd services/api && uv run python -m cfs.evals.bhsc --retrieval   # extraction/retrieval eval on the real sources
 ```
-Backend AI tests use fake adapters and never contact a provider.
+Backend AI tests use fake adapters and never contact a provider. CI (`.github/workflows/ci.yml`) runs:
+
+- backend lint and tests against pgvector;
+- an OpenAPI drift check;
+- the frontend type check, unit tests, and build;
+- `terraform fmt` and `validate`;
+- an image build.
 
 ## Backups
 ```bash

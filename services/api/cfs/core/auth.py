@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from cfs.core.config import get_settings
 from cfs.core.db import get_db
-from cfs.core.errors import AppError, Forbidden
+from cfs.core.errors import Forbidden
 from cfs.models import Membership, Organization, User
 from cfs.models.enums import Role
 
@@ -60,15 +60,22 @@ def get_principal(
     request: Request,
     db: Session = Depends(get_db),
     x_cfs_user: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
 ) -> Principal:
     settings = get_settings()
-    if settings.auth_mode != "local_single_user":
-        raise AppError("OIDC authentication is not implemented yet (Phase 6).", status=501, code="not_implemented")
+    if settings.auth_mode == "oidc":
+        from cfs.core.oidc import Unauthorized, resolve_principal, verify_token
+
+        if not authorization or not authorization.lower().startswith("bearer "):
+            raise Unauthorized("Sign-in required")
+        return resolve_principal(db, verify_token(authorization[7:].strip()))
     if settings.env != "test":
         client = request.client.host if request.client else ""
         if client not in {"127.0.0.1", "::1", "localhost", "testclient"} and not _is_private_docker(client):
             raise Forbidden("Local single-user mode only accepts connections from this machine.")
     if x_cfs_user:
+        if settings.env == "production":
+            raise Forbidden("X-CFS-User is not accepted in production")
         try:
             uid = uuid.UUID(x_cfs_user)
         except ValueError as e:

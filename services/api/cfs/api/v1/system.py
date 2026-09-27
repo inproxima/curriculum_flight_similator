@@ -31,10 +31,19 @@ def ready(db: Session = Depends(get_db)) -> dict[str, Any]:
         checks["broker"] = {"ok": True, "mode": "eager (inline)"}
     else:
         try:
-            import redis
+            if s.broker_url.startswith("sqs://"):
+                import boto3
 
-            redis.Redis.from_url(s.broker_url, socket_timeout=2).ping()
-            checks["broker"] = {"ok": True}
+                if s.sqs_queue_url:
+                    boto3.client("sqs", region_name=s.aws_region).get_queue_attributes(
+                        QueueUrl=s.sqs_queue_url, AttributeNames=["ApproximateNumberOfMessages"]
+                    )
+                checks["broker"] = {"ok": True, "type": "sqs"}
+            else:
+                import redis
+
+                redis.Redis.from_url(s.broker_url, socket_timeout=2).ping()
+                checks["broker"] = {"ok": True, "type": "redis"}
         except Exception as e:  # noqa: BLE001
             checks["broker"] = {"ok": False, "error": type(e).__name__}
     try:

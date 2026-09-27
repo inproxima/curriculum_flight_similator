@@ -685,8 +685,16 @@ def validate_envelope(ctx: TurnContext, env: dict, mode: str) -> tuple[dict, dic
     return out, report
 
 
-def answer(db: Session, conv: Conversation, user_text: str, mode: str, *, job_id=None, on_progress=None,
-           user_id: uuid.UUID | None = None) -> dict:
+def answer(
+    db: Session,
+    conv: Conversation,
+    user_text: str,
+    mode: str,
+    *,
+    job_id=None,
+    on_progress=None,
+    user_id: uuid.UUID | None = None,
+) -> dict:
     route_name = MODE_ROUTE.get(mode, "extract")
     usable, reasons = gateway.candidates_for(routes()[route_name], None)
     if not usable:
@@ -701,8 +709,16 @@ def answer(db: Session, conv: Conversation, user_text: str, mode: str, *, job_id
 
         s = db.get(Scenario, conv.scenario_id)
         base, snap, _r, _d = projection(db, s)
-    ctx = TurnContext(db, conv.organization_id, conv.curriculum_version_id, conv.scenario_id, provider, snap, base,
-                      user_id=user_id or conv.created_by)
+    ctx = TurnContext(
+        db,
+        conv.organization_id,
+        conv.curriculum_version_id,
+        conv.scenario_id,
+        provider,
+        snap,
+        base,
+        user_id=user_id or conv.created_by,
+    )
     history = []
     for m in db.scalars(select(Message).where(Message.conversation_id == conv.id).order_by(Message.created_at)):
         if m.role in ("user", "assistant"):

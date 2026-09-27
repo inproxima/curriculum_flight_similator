@@ -15,6 +15,7 @@ import {
 } from "../api/scenarioHooks";
 import { useAiMutations } from "../api/aiHooks";
 import { EvidenceChip } from "../components/Evidence";
+import { openAuthed } from "../lib/auth";
 import { useUi } from "../store/ui";
 
 const CLASS_TITLE: Record<string, string> = {
@@ -84,8 +85,8 @@ function ScenarioDetail({ id }: { id: string }) {
         <button className="primary" onClick={() => m.analyze.mutate(undefined, { onSuccess: (r) => setRunId(r.id), onError: onErr })}>
           {m.analyze.isPending ? "Analysing…" : "Run deterministic analysis"}
         </button>
-        <a href={`/api/v1/scenarios/${id}/export?format=html`} target="_blank" rel="noreferrer"><button>Export report (HTML)</button></a>
-        <a href={`/api/v1/scenarios/${id}/export?format=md`}><button>Export Markdown</button></a>
+        <button onClick={() => openAuthed(`/api/v1/scenarios/${id}/export?format=html`)}>Export report (HTML)</button>
+        <button onClick={() => openAuthed(`/api/v1/scenarios/${id}/export?format=md`, `${sc.title.replace(/[^a-z0-9]+/gi, "_")}.md`)}>Export Markdown</button>
       </div>
       <section className="card">
         <h3>Changes</h3>

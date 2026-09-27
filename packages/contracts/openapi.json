@@ -454,6 +454,52 @@
     "title": "DocumentVersionPatch",
     "type": "object"
    },
+   "FetchIn": {
+    "properties": {
+     "academic_year": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Academic Year"
+     },
+     "cohort_applicability": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cohort Applicability"
+     },
+     "title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Title"
+     },
+     "url": {
+      "title": "Url",
+      "type": "string"
+     }
+    },
+    "required": [
+     "url"
+    ],
+    "title": "FetchIn",
+    "type": "object"
+   },
    "HTTPValidationError": {
     "properties": {
      "detail": {
@@ -1133,6 +1179,25 @@
     "title": "ReviewItemOut",
     "type": "object"
    },
+   "RoleIn": {
+    "properties": {
+     "role": {
+      "enum": [
+       "admin",
+       "editor",
+       "reviewer",
+       "viewer"
+      ],
+      "title": "Role",
+      "type": "string"
+     }
+    },
+    "required": [
+     "role"
+    ],
+    "title": "RoleIn",
+    "type": "object"
+   },
    "SavedViewIn": {
     "properties": {
      "filters": {
@@ -1776,6 +1841,160 @@
  },
  "openapi": "3.1.0",
  "paths": {
+  "/api/v1/admin/memberships": {
+   "get": {
+    "operationId": "list_members_api_v1_admin_memberships_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "title": "Response List Members Api V1 Admin Memberships Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "List Members",
+    "tags": [
+     "auth"
+    ]
+   }
+  },
+  "/api/v1/admin/memberships/{user_id}": {
+   "put": {
+    "description": "Set a member's role. Note: when the IdP sends group claims, those override this at the user's next request.",
+    "operationId": "set_role_api_v1_admin_memberships__user_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "user_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "User Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RoleIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Set Role",
+    "tags": [
+     "auth"
+    ]
+   }
+  },
   "/api/v1/ai/runs/{run_id}": {
    "get": {
     "operationId": "model_run_api_v1_ai_runs__run_id__get",
@@ -1804,6 +2023,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -1851,6 +2086,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -1902,6 +2153,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -1964,6 +2231,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -2021,6 +2304,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -2046,6 +2345,30 @@
     "summary": "Explain",
     "tags": [
      "ai"
+    ]
+   }
+  },
+  "/api/v1/auth/config": {
+   "get": {
+    "description": "Public: what the browser needs to start sign-in. Contains no secrets.",
+    "operationId": "auth_config_api_v1_auth_config_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Auth Config Api V1 Auth Config Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Auth Config",
+    "tags": [
+     "auth"
     ]
    }
   },
@@ -2084,6 +2407,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -2129,6 +2468,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -2197,6 +2552,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -2252,6 +2623,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -2320,6 +2707,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -2376,6 +2779,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -2447,6 +2866,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -2503,6 +2938,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -2570,6 +3021,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -2644,6 +3111,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -2707,6 +3190,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -2769,6 +3268,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "requestBody": {
@@ -2828,6 +3343,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -2880,6 +3411,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "requestBody": {
@@ -2919,6 +3466,82 @@
     ]
    }
   },
+  "/api/v1/documents/fetch": {
+   "post": {
+    "description": "Import a public webpage or PDF through the controlled fetcher (allowlisted domains, no internal\naddresses, re-validated redirects, size/time limits). HTML is stored as extracted text.",
+    "operationId": "fetch_document_api_v1_documents_fetch_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FetchIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UploadResult"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Fetch Document",
+    "tags": [
+     "documents"
+    ]
+   }
+  },
   "/api/v1/entities/{entity_id}/versions": {
    "get": {
     "description": "Stable identity across curriculum versions: which exact revision each version uses.",
@@ -2948,6 +3571,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -3002,6 +3641,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -3080,6 +3735,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -3182,6 +3853,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -3245,6 +3932,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -3303,6 +4006,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -3373,6 +4092,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -3436,6 +4171,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -3482,8 +4233,8 @@
       }
      },
      {
-      "in": "header",
-      "name": "x-cfs-user",
+      "in": "query",
+      "name": "st",
       "required": false,
       "schema": {
        "anyOf": [
@@ -3494,7 +4245,7 @@
          "type": "null"
         }
        ],
-       "title": "X-Cfs-User"
+       "title": "St"
       }
      }
     ],
@@ -3521,6 +4272,151 @@
     "summary": "Stream Job",
     "tags": [
      "jobs"
+    ]
+   }
+  },
+  "/api/v1/jobs/{job_id}/stream-token": {
+   "post": {
+    "description": "Short-lived (5 min) token for EventSource, which cannot send Authorization headers.",
+    "operationId": "stream_token_api_v1_jobs__job_id__stream_token_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "job_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Job Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Stream Token Api V1 Jobs  Job Id  Stream Token Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Stream Token",
+    "tags": [
+     "auth"
+    ]
+   }
+  },
+  "/api/v1/me": {
+   "get": {
+    "operationId": "me_api_v1_me_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Me Api V1 Me Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Me",
+    "tags": [
+     "auth"
     ]
    }
   },
@@ -3552,6 +4448,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -3599,6 +4511,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -3650,6 +4578,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -3719,6 +4663,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -3777,6 +4737,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -3841,6 +4817,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -3901,6 +4893,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -4054,6 +5062,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -4103,6 +5127,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -4171,6 +5211,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -4248,6 +5304,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -4299,6 +5371,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -4366,6 +5454,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -4438,6 +5542,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "requestBody": {
@@ -4504,6 +5624,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -4577,6 +5713,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -4633,6 +5785,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -4704,6 +5872,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -4791,6 +5975,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -4857,6 +6057,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -4928,6 +6144,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -5012,6 +6244,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -5082,6 +6330,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -5207,6 +6471,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -5284,6 +6564,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -5358,6 +6654,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -5442,6 +6754,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "requestBody": {
@@ -5525,6 +6853,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -5590,6 +6934,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -5664,6 +7024,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -5720,6 +7096,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -5780,6 +7172,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -5836,6 +7244,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -5914,6 +7338,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -5987,6 +7427,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -6070,6 +7526,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -6169,6 +7641,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -6310,6 +7798,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -6386,6 +7890,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -6464,6 +7984,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -6534,6 +8070,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -6618,6 +8170,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -6678,6 +8246,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],
@@ -6744,6 +8328,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -6805,6 +8405,22 @@
        ],
        "title": "X-Cfs-User"
       }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
      }
     ],
     "responses": {
@@ -6865,6 +8481,22 @@
         }
        ],
        "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
       }
      }
     ],

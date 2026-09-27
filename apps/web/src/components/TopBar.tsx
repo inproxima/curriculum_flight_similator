@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { NavLink } from "react-router-dom";
+import { getJson } from "../api/client";
+import { signOut } from "../lib/auth";
 import { useJobs, usePrograms, useSearch, useVersions } from "../api/hooks";
 import { useUi } from "../store/ui";
 import { ScenarioSelector } from "./ScenarioSelector";
@@ -56,6 +59,7 @@ export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
         <NavLink to="/documents">Documents</NavLink>
         <NavLink to="/ai">AI &amp; usage</NavLink>
       </nav>
+      <UserBadge />
       <button className={assistantOpen ? "primary" : ""} aria-pressed={assistantOpen} onClick={() => setAssistantOpen(!assistantOpen)}
         title="Open the grounded assistant (map view)">Assistant</button>
     </header>
@@ -105,4 +109,15 @@ function SearchBox({ versionId, onPick }: { versionId: string | null; onPick: (i
 function sanitizeHeadline(h: string) {
   const esc = h.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return esc.replace(/&lt;b&gt;/g, "<b>").replace(/&lt;\/b&gt;/g, "</b>");
+}
+
+function UserBadge() {
+  const { data } = useQuery({ queryKey: ["me"], staleTime: 60_000, queryFn: () => getJson<{ display_name: string; email: string; role: string; auth_mode: string }>("/api/v1/me") });
+  if (!data) return null;
+  return (
+    <span className="row small" style={{ marginLeft: "auto", gap: 6 }}>
+      <span className="badge" title={data.email}>{data.display_name} · {data.role}</span>
+      {data.auth_mode === "oidc" && <button className="small" onClick={() => signOut()}>Sign out</button>}
+    </span>
+  );
 }

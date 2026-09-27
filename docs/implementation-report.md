@@ -1,8 +1,33 @@
-# Implementation report: Phases 1–5
+# Implementation report: Phases 1–6
 
 Pass 1 (Phases 1–4) and pass 2 (Phase 5, AI) were both completed on 2026-09-26. The workspace contains the labelled
 **synthetic fixture** and a **real** program, "Biomedical Sciences (BHSc)", imported from the three University of
 Calgary sources in `outputs/`.
+
+## Phase 6: security, accessibility, operations, and AWS preparation (pass 3)
+| Area | What exists | Verified by |
+|---|---|---|
+| Authentication | OIDC bearer verification (JWKS, issuer, audience or Cognito `client_id`, `token_use`, expiry, RS256/ES256 only); group-to-role mapping, with IdP groups authoritative; no role means denial; `/me`; SPA Authorization Code + PKCE (`oidc-client-ts`); job-scoped 5-minute stream tokens for SSE; authenticated PDF viewing and exports | `test_security.py` (13 cases); production image smoke test |
+| Fail-closed production | Startup refuses local auth, weak or missing `CFS_SECRET_KEY`, non-S3 storage, or localhost CORS; `X-CFS-User` ignored in production | unit test; `docker run` of the production image |
+| Web import | Controlled fetcher: scheme, port, credential and domain allowlist checks; public-IP-only resolution; IP-pinned connections (anti-rebinding); manually re-validated redirects; size, time and type limits; HTML to text | `test_security.py` (private IPs, metadata, redirect to metadata, oversized and executable responses, script stripping) |
+| Hardening | Security headers (CSP, frame, nosniff, HSTS in production, no-store); per-user rate limits on uploads and AI; admin membership API with self-demotion guard | tests |
+| Broker | Celery on SQS via a predefined queue; no remote control or events; 1-hour visibility timeout; readiness probes SQS | config test |
+| Containers | Non-root production image, multi-worker uvicorn with proxy headers, health check; dev stack verified with the same image | local build and run |
+| Accessibility | axe-core WCAG 2.1 A/AA scans on 7 pages plus the assistant panel. The only violations found (colour contrast) were fixed by darkening tokens | Playwright `a11y.spec.ts` (8 tests) |
+| AWS | Terraform: VPC, NAT, and S3 endpoint; ALB restricted to CloudFront plus a secret header; CloudFront with OAC, SPA function and CSP; ECS Fargate (ARM64) API, worker and migration task with autoscaling and circuit-breaker rollback; RDS PostgreSQL 16 (pgvector, encrypted, forced TLS, managed password, PITR, deletion protection); versioned private S3; SQS with DLQ; Secrets Manager; optional Cognito with role groups; CloudWatch logs, alarms and SNS; least-privilege IAM | `terraform validate` (AWS provider 6.66.0), CI job. **Not applied** |
+| Delivery | `scripts/deploy.sh` (build and push, migrate, roll out, publish SPA); GitHub Actions CI | `bash -n`; CI YAML parsed. **Not run against AWS** |
+| Docs | [deployment.md](deployment.md) (bootstrap, costs, security notes), [operations.md](operations.md) (health, backups, restore, rollback, jobs, secrets, providers) | — |
+
+**Not verified in AWS:** nothing was provisioned, so these have not been exercised in AWS:
+
+- the real Cognito sign-in flow;
+- SQS delivery;
+- RDS extension creation;
+- CloudFront streaming of SSE;
+- the deploy script.
+
+A first staging deployment is the next verification step. Rate limits are per API task, and WAF is recommended but
+not included.
 
 ## Phase 5: AI assistance (pass 2)
 | Area | What exists | Verified by |
@@ -48,7 +73,7 @@ is covered by tests, not by a real outage.
 | Access | Roles admin/editor/reviewer/viewer enforced server-side; org isolation; local single-user mode refused when `CFS_ENV=production` | `test_access.py` |
 | Storage | Local filesystem and S3 implementations of one interface | `test_storage.py` (S3 via moto) |
 
-Totals: **70 backend tests** (pytest, including 16 AI tests with fake providers), **4 frontend unit tests** (vitest), and **7 end-to-end tests** (Playwright, one with a mocked assistant),
+Totals: **96 backend tests** (pytest, including 16 AI tests with fake providers and 26 security tests), **4 frontend unit tests** (vitest), and **15 end-to-end tests** (Playwright: 7 functional, one with a mocked assistant, plus 8 axe WCAG 2.1 AA scans),
 all passing. Backend lint (ruff) is clean. The frontend type check and production build pass.
 
 ## Required demonstration (spec §26)
@@ -78,7 +103,7 @@ all passing. Backend lint (ruff) is clean. The frontend type check and productio
 - **Celery on SQS** is not exercised. The design relies on PostgreSQL job state plus idempotent handlers.
 
 ## Not implemented
-- **Phase 6**: OIDC/Cognito, AWS infrastructure templates, backup automation, full accessibility audit.
+- An actual AWS deployment (templates only, by design), AWS WAF, and a cross-region backup copy.
 - Controlled webpage import (URL fetcher), PDF export, entity field edits through review (field conflicts on
   credits and similar fields are recorded but can't be materialized), and a scenario projection cache.
 

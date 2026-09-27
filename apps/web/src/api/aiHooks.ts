@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { openJobStream } from "../lib/auth";
 import { getJson, qs } from "./client";
 
 const V1 = "/api/v1";
@@ -113,7 +114,7 @@ export function useAiMutations() {
 /** Wait for a durable job via SSE; resolves with the final job status. Survives reconnects (server replays events). */
 export function waitForJob(jobId: string, onEvent?: (msg: string, status: string) => void): Promise<string> {
   return new Promise((resolve) => {
-    const es = new EventSource(`${V1}/jobs/${jobId}/stream`);
+    openJobStream(jobId).then((es) => {
     let status = "queued";
     es.addEventListener("job", (ev) => {
       const d = JSON.parse((ev as MessageEvent).data);
@@ -123,6 +124,7 @@ export function waitForJob(jobId: string, onEvent?: (msg: string, status: string
     es.addEventListener("end", () => {
       es.close();
       resolve(status);
+    });
     });
   });
 }
