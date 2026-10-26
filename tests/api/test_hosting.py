@@ -47,9 +47,22 @@ def test_public_demo_production_config():
         Settings(**{**common, "secret_key": "short"}, storage_backend="db", cors_origins=[]).validate_for_runtime()
 
 
-@pytest.mark.parametrize("url", ["postgres://u:p@h:5432/d", "postgresql://u:p@h:5432/d"])
+@pytest.mark.parametrize(
+    "url", ["postgres://u:p@h:5432/d", "postgresql://u:p@h:5432/d", ' "postgresql://u:p@h:5432/d"\n', "'postgres://u:p@h:5432/d'"]
+)
 def test_host_style_database_urls_use_psycopg(url):
     assert Settings(database_url=url).database_url == "postgresql+psycopg://u:p@h:5432/d"
+
+
+@pytest.mark.parametrize("bad", ["", "PGPASSWORD=secret psql -h h -U u d"])
+def test_production_names_a_bad_database_url_without_echoing_it(bad):
+    s = Settings(
+        env="production", auth_mode="public_demo", secret_key="x" * 40, storage_backend="db",
+        cors_origins=["https://cfs.onrender.com"], database_url=bad,
+    )
+    with pytest.raises(RuntimeError, match="CFS_DATABASE_URL must be a postgresql") as e:
+        s.validate_for_runtime()
+    assert "secret" not in str(e.value)
 
 
 # ── PostgreSQL object store ──

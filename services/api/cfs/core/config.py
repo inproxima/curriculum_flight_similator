@@ -90,6 +90,11 @@ class Settings(BaseSettings):
         if self.env != "production":
             return
         problems = []
+        if not self.database_url.startswith("postgresql+psycopg://"):
+            # The value is never echoed: it holds the database password.
+            problems.append(
+                "CFS_DATABASE_URL must be a postgresql:// URL (on Render: the database's Internal Database URL)"
+            )
         if self.auth_mode == "local_single_user":
             problems.append("local_single_user auth mode is not permitted when CFS_ENV=production")
         if self.auth_mode == "oidc" and not (self.oidc_issuer and self.oidc_audience):
@@ -104,6 +109,8 @@ class Settings(BaseSettings):
             raise RuntimeError("Unsafe production configuration: " + "; ".join(problems))
 
     def model_post_init(self, __context) -> None:
+        # Pasted into a dashboard, the value often carries stray spaces or quotes.
+        self.database_url = self.database_url.strip().strip("\"'").strip()
         # Hosts such as Render hand out postgres:// or postgresql:// URLs; the app uses the psycopg 3 driver.
         for prefix in ("postgres://", "postgresql://"):
             if self.database_url.startswith(prefix):

@@ -33,7 +33,7 @@ The data never goes through Git. With the local database running:
 3. Run `scripts/load_into_render.sh` from the repository root. It reads the URL from the clipboard, dumps the
    local database, restores it, migrates it to the current schema, copies the original files from
    `data/objects` into it ([`scripts/copy_objects_to_db.py`](../scripts/copy_objects_to_db.py)), and compares row
-   counts. It refuses to touch a database that already has tables.
+   counts. It refuses to touch a database that already holds data (an empty schema the app created is replaced).
 4. Copy the database's **Internal Database URL** into the web service's `CFS_DATABASE_URL`.
 
 ## Things to know

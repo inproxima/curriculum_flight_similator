@@ -5,7 +5,8 @@
 #   1. Copy the database's External Database URL (Render dashboard → database → Connect → External).
 #   2. scripts/load_into_render.sh            (reads the URL from the clipboard, or asks for it)
 #
-# It refuses to touch a database that already has tables, so it cannot overwrite a hosted workspace.
+# It refuses to touch a database that already holds data, so it cannot overwrite a hosted workspace. An empty
+# schema that the app created on its first start is replaced.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -16,11 +17,16 @@ docker exec "$LOCAL_DB" pg_isready -U cfs -q || { echo "Start the local database
 
 URL="${CFS_TARGET_URL:-}"
 if [ -z "$URL" ] && command -v pbpaste >/dev/null; then
-  CLIP="$(pbpaste | tr -d '[:space:]')"
+  CLIP="$(pbpaste 2>/dev/null | tr -d "[:space:]\"'")" || CLIP=""
   case "$CLIP" in postgres://*|postgresql://*) URL="$CLIP"; echo "Using the database URL from the clipboard." ;; esac
 fi
 if [ -z "$URL" ]; then
-  read -rsp "Paste the External Database URL (hidden): " URL; echo
+  if [ -t 0 ]; then
+    read -rsp "Paste the External Database URL (hidden): " URL; echo
+  else
+    echo "No postgres:// URL on the clipboard. Copy the database's External Database URL, then run this again."
+    exit 1
+  fi
 fi
 case "$URL" in postgres://*|postgresql://*) ;; *) echo "That is not a postgres:// URL."; exit 1 ;; esac
 TARGET="${URL##*@}"; echo "Target: ${TARGET%%\?*}"   # host/db only; the password is never printed
@@ -30,7 +36,18 @@ if ! TABLES=$("$PG16/psql" "$URL" -Atqc "select count(*) from pg_tables where sc
   echo "On Render, add this computer's IP under the database's Networking → Inbound IP rules, then retry."
   exit 1
 fi
-[ "$TABLES" = "0" ] || { echo "The target already has $TABLES tables. Nothing was changed."; exit 1; }
+if [ "$TABLES" != "0" ]; then
+  # The hosted app migrates an empty database on its first start. Only that empty schema may be replaced.
+  ROWS=$("$PG16/psql" "$URL" -Atqc \
+    "select (select count(*) from organizations) + (select count(*) from stored_objects)" 2>/dev/null || echo "?")
+  if [ "$ROWS" = "0" ]; then
+    echo "The target holds only the empty schema the app created on its first start. Replacing it."
+    "$PG16/psql" "$URL" -qc "drop schema public cascade; create schema public;"
+  else
+    echo "The target already has data ($TABLES tables). Nothing was changed."
+    exit 1
+  fi
+fi
 
 DUMP="$(mktemp -t cfs-dump)"; trap 'rm -f "$DUMP"' EXIT
 echo "==> Dumping the local database"
