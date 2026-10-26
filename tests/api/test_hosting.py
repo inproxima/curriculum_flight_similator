@@ -147,6 +147,31 @@ def test_sweep_picks_up_queued_jobs_this_process_never_took(echo_job, db, monkey
     assert _wait_for(db, jid, JobStatus.succeeded).result == {"echo": 3}
 
 
+# ── deleting a draft version (cfs.ops.delete_version) ──
+
+
+def test_delete_draft_version_removes_it_and_its_scenarios(client, v1, seeded, db):
+    from conftest import new_scenario
+
+    from cfs.models import CurriculumVersion, Scenario
+    from cfs.ops.delete_version import Refused, delete_draft_version
+
+    draft = client.post(
+        f"/api/v1/programs/{seeded['program_id']}/versions", json={"label": "Throwaway draft", "from_version_id": v1}
+    ).json()
+    scen = new_scenario(client, draft["id"], "Based on the throwaway draft")
+    vid = uuid.UUID(draft["id"])
+
+    held = delete_draft_version(db, vid)
+    assert held["label"] == "Throwaway draft" and held["scenarios"] == 1 and held["element_memberships"] > 0
+    db.expire_all()
+    assert db.get(CurriculumVersion, vid) is None and db.get(Scenario, uuid.UUID(scen["id"])) is None
+    assert delete_draft_version(db, vid) is None  # already gone
+    assert client.get(f"/api/v1/versions/{v1}/entities").status_code == 200  # the source version is untouched
+    with pytest.raises(Refused, match="published"):
+        delete_draft_version(db, uuid.UUID(v1))
+
+
 # ── built web app served from the API ──
 
 

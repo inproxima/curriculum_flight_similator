@@ -39,6 +39,16 @@ The data never goes through Git. With the local database running:
    counts. It refuses to touch a database that already holds data (an empty schema the app created is replaced).
 4. Copy the database's **Internal Database URL** into the web service's `CFS_DATABASE_URL`.
 
+## Removing a draft version from the hosted copy
+Set `CFS_DELETE_DRAFT_VERSIONS` on the service to the version's id (comma-separate several) and redeploy. On start,
+[`cfs.ops.delete_version`](../services/api/cfs/ops/delete_version.py) deletes each draft and what exists only for
+it: scenarios based on it, assistant conversations about it, its memberships, document assignments and review items.
+Published versions are refused, and ids that are already gone are skipped. Documents, elements and links stay.
+Run it by hand with `python -m cfs.ops.delete_version <id>` to see what it would remove (add `--yes` to delete).
+
+The 2025–26 BHSc draft (`5b3490f1-…`) was removed this way on 2026-10-26, so the hosted BHSc has only 2026–27. The
+local workspace still has both. A program with no published version opens on its newest draft.
+
 ## Things to know
 - **Anyone with the link can change or delete anything**, including running AI jobs on the configured keys. The
   monthly budget and the per-job cap bound the spend. Keep a dump from before sharing, so you can restore it.

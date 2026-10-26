@@ -15,7 +15,8 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_PROJECT_ENVIRONMENT=/venv PATH=/venv/bin:$PATH
 RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr ocrmypdf ghostscript curl \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /bin/uv
+# uv from PyPI rather than ghcr.io: one registry fewer for the build to reach.
+RUN pip install --no-cache-dir "uv>=0.8,<0.9"
 WORKDIR /app
 COPY services/api/pyproject.toml services/api/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
@@ -30,4 +31,6 @@ RUN useradd --system --uid 10001 --home /app app
 USER app
 EXPOSE 10000
 # Render sets PORT. One process, so the in-process job pool (CFS_JOB_THREADS) is the whole job capacity.
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn cfs.main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1 --proxy-headers --forwarded-allow-ips '*'"]
+# CFS_DELETE_DRAFT_VERSIONS (comma-separated ids) removes those draft versions at start (cfs.ops.delete_version); a
+# refusal is logged and never keeps the app from starting.
+CMD ["sh", "-c", "alembic upgrade head && (python -m cfs.ops.delete_version --from-env || true) && exec uvicorn cfs.main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1 --proxy-headers --forwarded-allow-ips '*'"]
