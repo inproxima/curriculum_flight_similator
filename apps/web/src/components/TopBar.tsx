@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { NavLink } from "react-router-dom";
 import { getJson } from "../api/client";
 import { signOut } from "../lib/auth";
+import { defaultVersion } from "../lib/defaultVersion";
 import { useJobs, usePrograms, useSearch, useVersions } from "../api/hooks";
 import { useUi } from "../store/ui";
 import { isAiJob } from "./jobCenterModel";
@@ -21,7 +22,7 @@ export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
   useEffect(() => {
     const vs = versions.data;
     if (vs?.length && (!versionId || !vs.some((v) => v.id === versionId))) {
-      setVersion((vs.find((v) => v.status === "published") ?? vs[0]).id);
+      setVersion(defaultVersion(vs)!.id);
     }
   }, [versions.data, versionId, setVersion]);
 
