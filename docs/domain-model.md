@@ -34,8 +34,12 @@ an interpretation as an explicit statement is refused (`basis_relabel_forbidden`
 
 Alignment links also carry an asserted **strength** (0–1), its **strength_source** (`ai_estimate`, `reviewer`,
 `fixture`, `scenario`), and, for AI proposals, the `model_run_id`. The strong/moderate/weak label is computed by
-`cfs.analysis.alignment` and never stored (ADR 0003). `TYPE_PAIRS` in that module lists the allowed endpoint
-types for each relationship type.
+`cfs.analysis.alignment` and never stored (ADR 0003). The same holds for the **connection level** (ADR 0005):
+- a documented link is `direct`;
+- an asserted strength ≥ 0.9 is `direct`, ≥ 0.7 is `strong`, and anything lower is `partial`;
+- without an asserted strength, a computed *strong* label gives `strong` and anything else `partial`.
+
+`TYPE_PAIRS` in that module lists the allowed endpoint types for each relationship type.
 
 | Type | Direction | Propagates impact? |
 |---|---|---|
@@ -71,3 +75,36 @@ The run summary also holds `ripple` (elements reached per hop, ranked impacts wi
 `jobs` + `job_events` (durable progress; SSE replays from `Last-Event-ID`), `review_items` +
 `review_decisions`, `audit_events`, `saved_views`. `conversations`, `messages`, `model_runs`, and `tool_calls`
 exist for Phase 5.
+
+## Course outline imports (ADR 0004)
+`outline_imports` holds one outline reconciled against one course of one draft version. Its columns:
+- `organization_id`, `curriculum_version_id`, `course_entity_id`, `document_version_id`, `job_id`;
+- `status`: `queued`, `running`, `ready`, `applied`, `discarded`, `failed` or `reverted`;
+- `options`: what the user entered;
+- `edition`;
+- `extraction`: the verified candidates, reused when the import is re-run;
+- `plan`: items with their evidence, reasons, `depends_on` / `excludes`, and the missing pieces each one fills;
+- `state_hash` and `plan_hash` (the ETag is a hash of both);
+- `result`: counts, the missing pieces left, and `undo`, an ordered list of `{kind, id, before, after}` for
+  memberships, placements, sources, review items and the document's academic year;
+- `error`, and who created, applied and reverted it, and when.
+
+The `outline_import` job reads, extracts, compares, reconciles, verifies and plans; it never writes curriculum data.
+Apply and revert run in one transaction under a row lock on the version. Retiring an element removes its membership
+and every link touching it from that draft only. Replacing an element is a new revision of the same entity. Evidence
+is never attached to a revision another version shares.
+
+## Connection map (ADR 0005)
+`alignment_verdicts` records what the AI mapping concluded for one element of one draft version. One row per
+(`curriculum_version_id`, `entity_id`, `rel_type`):
+- `rel_type`: `contributes_to`, `assesses`, `supports`, `prepares_for`, or `prepared_by` (whether anything in an
+  earlier course prepares for it);
+- `verdict`: `linked` or `none`;
+- `reason`: the model's explanation for `none`;
+- `model_run_id` (`SET NULL` on delete) and `examined_at`.
+
+No row means "not mapped". Verdicts are advisory: the links themselves are ordinary proposed relationships
+(`ai_inferred`, `interpretation`) with the level stored as an asserted strength. The `ai_map_alignment` job
+(payload: `curriculum_version_id`, `course_ids`, `forward`, `cost_cap_usd`) writes both, on draft versions only.
+The Web payload exposes, per edge, `connection`, and per outcome, assessment and topic, a `mapping` object of the
+form `{kind: {best, count, verdict, reason}}`.

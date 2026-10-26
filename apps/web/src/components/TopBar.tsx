@@ -5,6 +5,7 @@ import { getJson } from "../api/client";
 import { signOut } from "../lib/auth";
 import { useJobs, usePrograms, useSearch, useVersions } from "../api/hooks";
 import { useUi } from "../store/ui";
+import { isAiJob } from "./jobCenterModel";
 import { ScenarioSelector } from "./ScenarioSelector";
 
 export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
@@ -24,7 +25,8 @@ export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
     }
   }, [versions.data, versionId, setVersion]);
 
-  const running = jobs.data?.filter((j) => j.status === "running" || j.status === "queued").length ?? 0;
+  // document processing only: AI mapping and proposals have their own progress cards (JobCenter)
+  const running = jobs.data?.filter((j) => (j.status === "running" || j.status === "queued") && !isAiJob(j)).length ?? 0;
   return (
     <header className="topbar">
       <span className="brand">Curriculum Flight Simulator</span>
@@ -56,6 +58,7 @@ export function TopBar({ evidenceRatio }: { evidenceRatio: number | null }) {
         <NavLink to="/sequence" title="Year/term sequence map of courses and prerequisites">Sequence</NavLink>
         <NavLink to="/table">Table</NavLink>
         <NavLink to="/matrix">Outcomes</NavLink>
+        <NavLink to="/connections" title="How directly every outcome, assessment and topic connects (AI-mapped)">Connections</NavLink>
         <NavLink to="/scenarios">Scenarios</NavLink>
         <NavLink to="/reviews">Review inbox</NavLink>
         <NavLink to="/documents">Documents</NavLink>

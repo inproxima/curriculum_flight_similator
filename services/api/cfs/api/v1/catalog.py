@@ -155,8 +155,17 @@ def get_web(
 ) -> dict[str, Any]:
     """Alignment Web: every element (program outcomes, courses, course outcomes, assessments, topics) with
     strength-rated vertical and horizontal links, gaps, program-outcome threads, and a scorecard."""
+    from cfs.ai.mapping import load_verdicts
+
     snap = version_snapshot(db, p, version_id)
-    return build_web(snap, detail=detail, focus=focus, pathway=pathway, include_rejected=include_rejected)
+    return build_web(
+        snap,
+        detail=detail,
+        focus=focus,
+        pathway=pathway,
+        include_rejected=include_rejected,
+        verdicts=load_verdicts(db, version_id),
+    )
 
 
 @router.get("/versions/{version_id}/table", tags=["graph"])
@@ -451,7 +460,8 @@ def get_span(span_id: uuid.UUID, db: Session = Depends(get_db), p: Principal = D
     dv = db.get(DocumentVersion, span.document_version_id)
     doc = db.get(Document, dv.document_id)
     out = SpanOut.model_validate(span)
-    out.document_title, out.document_type = doc.title, doc.document_type.value
+    out.document_title, out.document_type, out.mime_type = doc.title, doc.document_type.value, dv.mime_type
+    out.page_count = dv.page_count
     out.publication_date, out.academic_year, out.is_synthetic = dv.publication_date, dv.academic_year, dv.is_synthetic
     return out
 

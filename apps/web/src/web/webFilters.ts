@@ -1,5 +1,6 @@
 /** Layers for the Alignment Web: which elements and links are shown. Pure; the layout never depends on these. */
 import type { WebEdge, WebGap, WebNode, WebView } from "../api/webHooks";
+import type { ColorBy } from "./webStyle";
 
 export type LinkKind =
   | "clo_plo"
@@ -17,6 +18,8 @@ export interface WebFilters {
   nodeTypes: string[];
   linkKinds: LinkKind[];
   strengths: string[];
+  connections: string[]; // direct | strong | partial
+  colorBy: ColorBy;
   provenance: string[];
   showGaps: boolean;
   changedOnly: boolean;
@@ -49,8 +52,10 @@ export const HORIZONTAL_KINDS: LinkKind[] = ["clo_clo", "assessment_next", "topi
 
 export const DEFAULT_WEB_FILTERS: WebFilters = {
   nodeTypes: ["program_outcome", "course", "course_outcome", "assessment", "topic"],
-  linkKinds: ["clo_plo", "assessment_clo", "topic_clo", "clo_clo", "assessment_next"],
+  linkKinds: ["clo_plo", "assessment_clo", "topic_clo", "clo_clo", "assessment_next", "topic_prep"],
   strengths: ["strong", "moderate", "weak"],
+  connections: ["direct", "strong", "partial"],
+  colorBy: "connection",
   provenance: ["documented", "accepted_inference", "proposed", "scenario"],
   showGaps: true,
   changedOnly: false,
@@ -110,14 +115,20 @@ export function applyWebFilters(view: Pick<WebView, "nodes" | "edges">, f: WebFi
   const edges = new Set<string>();
   for (const e of view.edges) {
     if (!nodes.has(e.source) || !nodes.has(e.target)) continue;
-    if (!f.linkKinds.includes(linkKind(e, byId)) && !e.bundle) continue;
-    if (!f.provenance.includes(e.provenance)) continue;
-    const label = e.strength?.label;
-    if (label && label !== "missing" && !f.strengths.includes(label)) continue;
-    if (f.changedOnly && !isChanged(e.status)) continue;
-    edges.add(e.id);
+    if (edgePasses(e, byId, f)) edges.add(e.id);
   }
   return { nodes, edges };
+}
+
+/** The link layers alone (kind, source, strength, connection level, changed-only), whatever its ends. */
+export function edgePasses(e: WebEdge, byId: Map<string, WebNode>, f: WebFilters): boolean {
+  if (!f.linkKinds.includes(linkKind(e, byId)) && !e.bundle) return false;
+  if (!f.provenance.includes(e.provenance)) return false;
+  const label = e.strength?.label;
+  if (label && label !== "missing" && !f.strengths.includes(label)) return false;
+  if (e.connection && !(f.connections ?? DEFAULT_WEB_FILTERS.connections).includes(e.connection)) return false;
+  if (f.changedOnly && !isChanged(e.status)) return false;
+  return true;
 }
 
 /** Dotted "missing link" edges drawn for gaps that connect two visible nodes (e.g. a prerequisite with no bridge). */

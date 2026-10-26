@@ -22,6 +22,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     Text,
@@ -43,6 +44,7 @@ from cfs.models.enums import (
     JobStatus,
     OcrState,
     Origin,
+    OutlineImportStatus,
     PlacementClass,
     ProcessingStatus,
     RelType,
@@ -779,3 +781,75 @@ class SavedView(Base):
     filters: Mapped[dict] = mapped_column(JSONB, default=dict)
     layers: Mapped[list] = mapped_column(JSONB, default=list)
     updated_at: Mapped[datetime] = ts_now()
+
+
+class OutlineImport(Base):
+    """One course outline reconciled against one course in one draft version (cfs.outlines).
+
+    The plan (what the agent proposes, verified by code) is stored here and nothing is written to the curriculum
+    until a person applies a selection of it. `result.undo` records every membership change for revert."""
+
+    __tablename__ = "outline_imports"
+    __table_args__ = (Index("ix_outline_imports_course", "curriculum_version_id", "course_entity_id", "created_at"),)
+    id: Mapped[uuid.UUID] = uuid_pk()
+    organization_id: Mapped[uuid.UUID] = org_fk()
+    curriculum_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("curriculum_versions.id", ondelete="CASCADE"), index=True
+    )
+    course_entity_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("entities.id", ondelete="CASCADE"), index=True)
+    document_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document_versions.id", ondelete="CASCADE"), index=True
+    )
+    job_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    status: Mapped[OutlineImportStatus] = mapped_column(
+        str_enum(OutlineImportStatus), default=OutlineImportStatus.queued
+    )
+    options: Mapped[dict] = mapped_column(JSONB, default=dict)  # what the user entered (academic year, aliases)
+    edition: Mapped[dict | None] = mapped_column(JSONB)
+    extraction: Mapped[dict | None] = mapped_column(JSONB)  # verified candidates for this course (reused on rerun)
+    plan: Mapped[dict | None] = mapped_column(JSONB)
+    result: Mapped[dict | None] = mapped_column(JSONB)
+    warnings: Mapped[list] = mapped_column(JSONB, default=list)
+    model_run_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    state_hash: Mapped[str | None] = mapped_column(String(64))
+    plan_hash: Mapped[str | None] = mapped_column(String(64))
+    error: Mapped[dict | None] = mapped_column(JSONB)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = ts_now()
+    updated_at: Mapped[datetime] = ts_now()
+    applied_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reverted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    reverted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AlignmentVerdict(Base):
+    """The AI's last examination of one element for one kind of link (cfs.ai.mapping): whether it found any target.
+
+    Not a curriculum fact: it records that the element was examined, so "the AI found no connection" can be shown
+    differently from "not examined yet". Links themselves are relationship rows (proposed until accepted)."""
+
+    __tablename__ = "alignment_verdicts"
+    __table_args__ = (UniqueConstraint("curriculum_version_id", "entity_id", "rel_type"),)
+    id: Mapped[uuid.UUID] = uuid_pk()
+    organization_id: Mapped[uuid.UUID] = org_fk()
+    curriculum_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("curriculum_versions.id", ondelete="CASCADE"), index=True
+    )
+    entity_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("entities.id", ondelete="CASCADE"), index=True)
+    rel_type: Mapped[str] = mapped_column(String(40))  # contributes_to | assesses | supports | prepares_for
+    verdict: Mapped[str] = mapped_column(String(20))  # linked | none
+    reason: Mapped[str | None] = mapped_column(Text)
+    model_run_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("model_runs.id", ondelete="SET NULL"))
+    examined_at: Mapped[datetime] = ts_now()
+
+
+class StoredObject(Base):
+    """Original files when CFS_STORAGE_BACKEND=db (cfs.storage.db). Keys are content-addressed (content_key)."""
+
+    __tablename__ = "stored_objects"
+    key: Mapped[str] = mapped_column(String(512), primary_key=True)
+    content_type: Mapped[str] = mapped_column(String(200))
+    size: Mapped[int] = mapped_column(BigInteger)
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = ts_now()

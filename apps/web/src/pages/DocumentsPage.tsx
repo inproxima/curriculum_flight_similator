@@ -1,9 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ApiError, getJson } from "../api/client";
 import { useAiMutations, useAiStatus } from "../api/aiHooks";
 import { useDocuments, useJobs, usePrograms, useVersionSources, useVersions, type DocumentVersionOut, type Job } from "../api/hooks";
-import { openJobStream } from "../lib/auth";
+import { JobProgress } from "../components/JobProgress";
 import { useUi } from "../store/ui";
 
 const DOC_TYPES = ["program_outline", "review_report", "webpage_extract", "course_outline", "assessment_document", "pasted_text", "other"];
@@ -162,45 +162,6 @@ function UploadForm({ onUploaded }: { onUploaded: (jobId: string | null) => void
       <button className="primary" disabled={busy}>{busy ? "Uploading…" : "Upload"}</button>
       {msg && <p className="small">{msg}</p>}
     </form>
-  );
-}
-
-export function JobProgress({ jobId }: { jobId: string }) {
-  const [events, setEvents] = useState<{ id: number; stage: string | null; status: string; message: string }[]>([]);
-  const [job, setJob] = useState<{ status: string; progress: number; stage: string | null } | null>(null);
-  const qc = useQueryClient();
-  useEffect(() => {
-    setEvents([]);
-    let es: EventSource | null = null;
-    let closed = false;
-    openJobStream(jobId).then((stream) => {
-      if (closed) { stream.close(); return; }
-      es = stream;
-    es.addEventListener("job", (ev) => {
-      const d = JSON.parse((ev as MessageEvent).data);
-      setEvents((xs) => (xs.some((x) => x.id === d.id) ? xs : [...xs, d]));
-      setJob(d.job);
-    });
-    es.addEventListener("end", () => {
-      es?.close();
-      qc.invalidateQueries({ queryKey: ["documents"] });
-      qc.invalidateQueries({ queryKey: ["reviews"] });
-      qc.invalidateQueries({ queryKey: ["jobs"] });
-    });
-    });
-    return () => { closed = true; es?.close(); };
-  }, [jobId, qc]);
-  return (
-    <div className="card" aria-live="polite">
-      <div className="row"><strong className="grow">Processing</strong><span className="badge">{job?.status ?? "queued"}</span></div>
-      <div className="progress" role="progressbar" aria-valuenow={Math.round((job?.progress ?? 0) * 100)} aria-valuemin={0} aria-valuemax={100}>
-        <div style={{ width: `${(job?.progress ?? 0) * 100}%` }} />
-      </div>
-      <ul className="list small">{events.map((e) => <li key={e.id}><span className="badge">{e.stage ?? "job"}</span> {e.message}</li>)}</ul>
-      <div className="row">
-        <button className="small" onClick={() => fetch(`/api/v1/jobs/${jobId}/cancel`, { method: "POST" })}>Cancel</button>
-      </div>
-    </div>
   );
 }
 

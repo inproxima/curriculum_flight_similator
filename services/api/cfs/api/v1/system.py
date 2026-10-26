@@ -29,6 +29,8 @@ def ready(db: Session = Depends(get_db)) -> dict[str, Any]:
     s = get_settings()
     if s.task_always_eager:
         checks["broker"] = {"ok": True, "mode": "eager (inline)"}
+    elif s.job_runner == "thread":
+        checks["broker"] = {"ok": True, "mode": "in-process threads"}
     else:
         try:
             if s.broker_url.startswith("sqs://"):

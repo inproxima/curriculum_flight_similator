@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 async function pickEntity(page: Page, text: string, key: string) {
   await page.getByRole("link", { name: "Sequence", exact: true }).click();

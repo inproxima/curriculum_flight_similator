@@ -34,6 +34,16 @@ interface UiState {
   webFocus: string | null;
   sim: SimState;
   fitRequest: { ids: string[]; nonce: number } | null;
+  /** Course outline import dialog: which course, and which import (null = start a new one). Not persisted. */
+  outlineDialog: { courseId: string; importId: string | null } | null;
+  /** Finished background jobs whose notification was dismissed (persisted, newest 50). */
+  dismissedJobs: string[];
+  dismissJob: (id: string) => void;
+  /** The Web as a force-directed network (default) or as year/term columns. */
+  webView: "network" | "columns";
+  setWebView: (v: "network" | "columns") => void;
+  net: NetSettings;
+  setNet: (n: Partial<NetSettings>) => void;
   setProgram: (id: string | null) => void;
   setVersion: (id: string | null) => void;
   setScenario: (id: string | null) => void;
@@ -52,7 +62,16 @@ interface UiState {
   setWebFocus: (id: string | null) => void;
   setSim: (s: Partial<SimState>) => void;
   requestFit: (ids: string[]) => void;
+  setOutlineDialog: (d: UiState["outlineDialog"]) => void;
 }
+
+export interface NetSettings {
+  arrange: "years" | "clusters";
+  spread: number;
+  hideRest: boolean;
+  isolate: boolean;
+}
+const DEFAULT_NET: NetSettings = { arrange: "years", spread: 1, hideRest: false, isolate: false };
 
 const closedSim: SimState = { open: false, runId: null, mode: "diff", step: 0, playing: false };
 
@@ -78,10 +97,18 @@ export const useUi = create<UiState>()(
       webFocus: null,
       sim: closedSim,
       fitRequest: null,
+      outlineDialog: null,
+      dismissedJobs: [],
+      dismissJob: (id) => set((s) => ({ dismissedJobs: [id, ...s.dismissedJobs.filter((x) => x !== id)].slice(0, 50) })),
+      webView: "network",
+      // the columns' focused slice means nothing to the network, and its banner would linger there
+      setWebView: (webView) => set(webView === "network" ? { webView, webFocus: null } : { webView }),
+      net: DEFAULT_NET,
+      setNet: (n) => set((s) => ({ net: { ...s.net, ...n } })),
       setProgram: (programId) =>
-        set({ programId, versionId: null, scenarioId: null, selection: null, highlight: emptyHighlight, expanded: [], focus: null, webFocus: null, sim: closedSim }),
+        set({ programId, versionId: null, scenarioId: null, selection: null, highlight: emptyHighlight, expanded: [], focus: null, webFocus: null, sim: closedSim, outlineDialog: null }),
       setVersion: (versionId) =>
-        set({ versionId, scenarioId: null, selection: null, highlight: emptyHighlight, expanded: [], focus: null, webFocus: null, sim: closedSim }),
+        set({ versionId, scenarioId: null, selection: null, highlight: emptyHighlight, expanded: [], focus: null, webFocus: null, sim: closedSim, outlineDialog: null }),
       setScenario: (scenarioId) => set({ scenarioId, highlight: emptyHighlight, sim: closedSim }),
       setCompareBaseline: (compareBaseline) => set({ compareBaseline }),
       toggleLayer: (layer) =>
@@ -107,6 +134,7 @@ export const useUi = create<UiState>()(
       setWebFocus: (webFocus) => set({ webFocus }),
       setSim: (sim) => set((s) => ({ sim: { ...s.sim, ...sim } })),
       requestFit: (ids) => set((s) => ({ fitRequest: { ids, nonce: (s.fitRequest?.nonce ?? 0) + 1 } })),
+      setOutlineDialog: (outlineDialog) => set({ outlineDialog }),
     }),
     {
       name: "cfs-ui",
@@ -118,10 +146,18 @@ export const useUi = create<UiState>()(
         filters: s.filters,
         compareBaseline: s.compareBaseline,
         webFilters: s.webFilters,
+        dismissedJobs: s.dismissedJobs,
+        webView: s.webView,
+        net: s.net,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<UiState>;
-        return { ...current, ...p, webFilters: { ...DEFAULT_WEB_FILTERS, ...(p.webFilters ?? {}) } };
+        const saved = p.webFilters;
+        // layers saved before the connection map existed: switch on the topic-preparation links it maps
+        const upgraded = saved && !saved.connections && !saved.linkKinds?.includes("topic_prep")
+          ? { ...saved, linkKinds: [...saved.linkKinds, "topic_prep" as const] }
+          : saved;
+        return { ...current, ...p, webFilters: { ...DEFAULT_WEB_FILTERS, ...(upgraded ?? {}) }, net: { ...DEFAULT_NET, ...(p.net ?? {}) } };
       },
     },
   ),

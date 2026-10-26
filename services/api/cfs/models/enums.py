@@ -206,3 +206,13 @@ class Severity(StrEnum):
     low = "low"
     medium = "medium"
     high = "high"
+
+
+class OutlineImportStatus(StrEnum):
+    queued = "queued"
+    running = "running"
+    ready = "ready"
+    applied = "applied"
+    discarded = "discarded"
+    failed = "failed"
+    reverted = "reverted"

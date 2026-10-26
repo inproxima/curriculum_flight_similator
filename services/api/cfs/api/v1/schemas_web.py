@@ -51,6 +51,15 @@ class WebNode(BaseModel):
     metrics: dict[str, Any] = {}
     metrics_before: dict[str, Any] | None = None
     aggregate: dict[str, int] | None = None
+    # per link type this element is a source of: best connection level found, and the AI mapping's verdict
+    mapping: dict[str, "NodeMapping"] | None = None
+
+
+class NodeMapping(BaseModel):
+    best: Literal["direct", "strong", "partial"] | None = None
+    count: int = 0
+    verdict: Literal["linked", "none"] | None = None
+    reason: str | None = None
 
 
 class WebEdge(BaseModel):
@@ -66,6 +75,7 @@ class WebEdge(BaseModel):
     basis: str
     review_state: str
     provenance: Literal["documented", "accepted_inference", "proposed", "scenario"]
+    connection: Literal["direct", "strong", "partial"] | None = None
     strength: EdgeStrength | None = None
     strength_before: float | None = None
     rationale: str | None = None

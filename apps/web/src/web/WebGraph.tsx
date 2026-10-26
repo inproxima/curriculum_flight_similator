@@ -65,6 +65,7 @@ function FitController() {
 }
 
 function Inner(p: WebGraphProps) {
+  const colorBy = useUi((s) => s.webFilters.colorBy ?? "connection");
   const zoom = useStore((s) => s.transform[2]);
   const compact = zoom < 0.45;
   const byId = useMemo(() => new Map(p.view.nodes.map((n) => [n.id, n])), [p.view.nodes]);
@@ -116,7 +117,7 @@ function Inner(p: WebGraphProps) {
       const [sh, th] = handlesFor(e, src, tgt, p.layout);
       const dim = p.emphasis ? !(p.emphasis.has(e.source) && p.emphasis.has(e.target)) : false;
       const hl = !!p.emphasis && !dim;
-      const look = edgeLook(e, { diff: p.diff, dim, hl });
+      const look = edgeLook(e, { diff: p.diff, dim, hl, colorBy });
       out.push({
         id: e.id,
         source: e.source,
@@ -124,7 +125,7 @@ function Inner(p: WebGraphProps) {
         sourceHandle: sh,
         targetHandle: th,
         type: "strength",
-        data: { edge: e, diff: p.diff, dim, hl, selected: p.selectedId === e.id, pulse: !!p.pulse?.has(e.id) },
+        data: { edge: e, diff: p.diff, dim, hl, selected: p.selectedId === e.id, pulse: !!p.pulse?.has(e.id), colorBy },
         markerEnd: e.category === "containment" ? undefined : { type: MarkerType.ArrowClosed, color: look.stroke, width: 12, height: 12 },
         zIndex: hl || (p.diff && e.status !== "unchanged") ? 10 : e.category === "containment" ? 0 : 1,
         ariaLabel: look.title,
@@ -137,7 +138,7 @@ function Inner(p: WebGraphProps) {
       }
     }
     return out;
-  }, [p.view.edges, p.view.gaps, p.visible, byId, p.layout, p.emphasis, p.diff, p.selectedId, p.pulse, p.showGaps]);
+  }, [p.view.edges, p.view.gaps, p.visible, byId, p.layout, p.emphasis, p.diff, p.selectedId, p.pulse, p.showGaps, colorBy]);
 
   return (
     <ReactFlow

@@ -513,6 +513,7 @@ def _validate_course_content(out: dict[str, Any], pages: dict[int, str], cands: 
                 "kind": "outcome",
                 "course": code,
                 "key": key,
+                "number": str(o["number"]).strip() if o.get("number") not in (None, "") else None,
                 "statement": normalize(o["statement"]),
                 "contributes": [],
                 "page": pg,

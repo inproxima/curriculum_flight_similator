@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from cfs.curriculum.rules import parse_expr, render
 from cfs.ingest.pipeline import review_item
+from cfs.ingest.text import normalize
 from cfs.models import (
     AssessmentRevisionDetails,
     CoursePlacement,
@@ -30,6 +31,7 @@ from cfs.models import (
     Entity,
     EntityFieldEvidence,
     EntityRevision,
+    OutcomeRevisionDetails,
     RelationshipEvidence,
     RelationshipRevision,
     RequirementRule,
@@ -457,6 +459,28 @@ def resolve_candidates(
                     [c["span_id"]],
                 )
             else:
+                det = db.get(OutcomeRevisionDetails, rev.id)
+                current = (det.statement_verbatim if det and det.statement_verbatim else None) or rev.title
+                if normalize(current).lower().strip(" .;:") != normalize(c["statement"]).lower().strip(" .;:"):
+                    # Keys are positional (CO1, CO2 … in document order), so the same key in another document can be
+                    # a different outcome. Different wording is a conflict to decide, never supporting evidence.
+                    item(
+                        ReviewItemKind.conflicting_requirement,
+                        f"{c['key']}: outcome wording differs between sources",
+                        f"field:{c['key']}:statement",
+                        {
+                            "type": "field",
+                            "code": c["key"],
+                            "field": "statement",
+                            "existing": current,
+                            "document": c["statement"],
+                        },
+                        [c["span_id"]],
+                        subject=ent.id,
+                        detail="The version records different wording for this outcome. Choose which wording applies "
+                        "(or import the course outline from the course to let a newer outline replace older content).",
+                    )
+                    continue
                 stats["matched"] += 1
                 _attach(db, rev, "statement", c["span_id"])
                 stats["evidence_attached"] += 1

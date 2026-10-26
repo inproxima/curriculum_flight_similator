@@ -3,6 +3,9 @@
 Local single-user mode (development) binds everything to a local admin in a default organization.
 For tests and multi-user local trials, `X-CFS-User` may name another existing user (development/test
 only). Production requires OIDC (Phase 6) and refuses local mode at startup (see Settings).
+
+Public demo mode (a hosted prototype with no sign-in) binds every visitor, from anywhere, to that same local
+administrator and workspace.
 """
 
 import uuid
@@ -69,6 +72,9 @@ def get_principal(
         if not authorization or not authorization.lower().startswith("bearer "):
             raise Unauthorized("Sign-in required")
         return resolve_principal(db, verify_token(authorization[7:].strip()))
+    if settings.auth_mode == "public_demo":
+        # Public prototype: everyone with the link shares the local workspace and its administrator.
+        return ensure_local_principal(db)
     if settings.env != "test":
         client = request.client.host if request.client else ""
         if client not in {"127.0.0.1", "::1", "localhost", "testclient"} and not _is_private_docker(client):

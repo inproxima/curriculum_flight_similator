@@ -25,14 +25,22 @@ class Settings(BaseSettings):
     sqs_visibility_timeout: int = 3600  # must exceed the longest job; duplicate delivery is still safe
     # When true, Celery tasks execute inline (tests, or running without a worker).
     task_always_eager: bool = False
+    # celery: jobs go through the broker to a separate worker. thread: the API process runs them in a small
+    # background pool (single-service hosting with no broker; job state is still durable in PostgreSQL).
+    job_runner: Literal["celery", "thread"] = "celery"
+    job_threads: int = 2
 
-    storage_backend: Literal["local", "s3"] = "local"
+    # db keeps originals in PostgreSQL (small single-service deployments with no persistent disk or bucket).
+    storage_backend: Literal["local", "s3", "db"] = "local"
     storage_root: str = "./data/objects"
     s3_bucket: str | None = None
     s3_region: str | None = None
 
-    # Local single-user mode. Refused when env=production (fails closed).
-    auth_mode: Literal["local_single_user", "oidc"] = "local_single_user"
+    # local_single_user: no sign-in, this machine only; refused when env=production (fails closed).
+    # public_demo: no sign-in for anyone who has the link; every visitor shares one workspace and one admin user.
+    #   For a public prototype only. Set it deliberately; it is never a default.
+    # oidc: sign-in through an identity provider.
+    auth_mode: Literal["local_single_user", "public_demo", "oidc"] = "local_single_user"
     # Signs short-lived stream tokens. MUST be set (≥32 chars) in production.
     secret_key: str = "dev-insecure-secret-change-me-dev-insecure-secret"
     # OIDC (Amazon Cognito or institutional IdP)
@@ -58,6 +66,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"])
 
     max_upload_bytes: int = 50 * 1024 * 1024
+    # Built web app (apps/web/dist) to serve from the API at "/", so one service hosts both. Unset in development.
+    web_dist_dir: str | None = None
 
     # Provider credentials stay on the backend only.
     openai_api_key: str | None = None
@@ -86,14 +96,18 @@ class Settings(BaseSettings):
             problems.append("CFS_OIDC_ISSUER and CFS_OIDC_AUDIENCE are required for OIDC")
         if self.secret_key.startswith("dev-insecure") or len(self.secret_key) < 32:
             problems.append("CFS_SECRET_KEY must be set to a random value of at least 32 characters")
-        if self.storage_backend != "s3":
-            problems.append("CFS_STORAGE_BACKEND must be s3 in production")
+        if self.storage_backend == "local":
+            problems.append("CFS_STORAGE_BACKEND must be s3 or db in production")
         if any("localhost" in o or "127.0.0.1" in o for o in self.cors_origins):
             problems.append("CFS_CORS_ORIGINS must not include localhost in production")
         if problems:
             raise RuntimeError("Unsafe production configuration: " + "; ".join(problems))
 
     def model_post_init(self, __context) -> None:
+        # Hosts such as Render hand out postgres:// or postgresql:// URLs; the app uses the psycopg 3 driver.
+        for prefix in ("postgres://", "postgresql://"):
+            if self.database_url.startswith(prefix):
+                self.database_url = "postgresql+psycopg://" + self.database_url[len(prefix) :]
         if self.db_host and self.db_user and self.db_password:
             from urllib.parse import quote
 

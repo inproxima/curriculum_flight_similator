@@ -32,9 +32,10 @@ from cfs.api.v1.schemas import (
 from cfs.core.audit import audit
 from cfs.core.auth import Principal, get_principal
 from cfs.core.db import get_db, get_sessionmaker
-from cfs.core.errors import AppError, Conflict
-from cfs.core.jobs import create_job, enqueue, retry_job
+from cfs.core.errors import AppError
+from cfs.core.jobs import enqueue, retry_job
 from cfs.core.scope import get_scoped
+from cfs.documents import assign_source as assign_source_service
 from cfs.documents import store_upload
 from cfs.models import (
     CurriculumSource,
@@ -46,7 +47,7 @@ from cfs.models import (
     JobEvent,
     ReviewItem,
 )
-from cfs.models.enums import ApprovalStatus, DocumentType, JobStatus, Role, SourceAuthority
+from cfs.models.enums import DocumentType, JobStatus, Role
 from cfs.reviews import decide
 from cfs.storage import get_store
 
@@ -258,63 +259,58 @@ def assign_source(
     p.require(Role.editor)
     dv = get_scoped(db, DocumentVersion, dv_id, p, "Document version")
     cv = get_scoped(db, CurriculumVersion, body.curriculum_version_id, p, "Curriculum version")
-    if db.scalar(
-        select(CurriculumSource).where(
-            CurriculumSource.document_version_id == dv.id, CurriculumSource.curriculum_version_id == cv.id
-        )
-    ):
-        raise Conflict("This document version is already assigned to that curriculum version")
-    if (
-        dv.academic_year
-        and cv.academic_year
-        and dv.academic_year != cv.academic_year
-        and body.authority == "authoritative"
-        and not body.is_exploratory_cross_version
-    ):
-        raise Conflict(
-            f"Document academic year {dv.academic_year} differs from version {cv.academic_year}. "
-            "Assign it as supporting/historical, or mark it as exploratory cross-version mapping.",
-            code="academic_year_mismatch",
-        )
-    src = CurriculumSource(
-        organization_id=p.org_id,
-        document_version_id=dv.id,
-        curriculum_version_id=cv.id,
-        authority=SourceAuthority(body.authority),
+    src, job = assign_source_service(
+        db,
+        p,
+        dv,
+        cv,
+        authority=body.authority,
         applicability=body.applicability,
-        is_exploratory_cross_version=body.is_exploratory_cross_version,
         notes=body.notes,
-        approval_status=ApprovalStatus.approved,
-        assigned_by=p.user_id,
+        exploratory=body.is_exploratory_cross_version,
     )
-    db.add(src)
-    db.flush()
-    job = create_job(db, p.org_id, "resolve_source", {"curriculum_source_id": str(src.id)}, user_id=p.user_id)
-    audit(db, p, "source.assigned", "curriculum_source", src.id, body.model_dump(mode="json"))
     db.commit()
-    enqueue(job.id)
+    if job is not None:
+        enqueue(job.id)
     return src
 
 
 # ── jobs ──
 
 
+def _with_last_message(db: Session, jobs: list[Job]) -> list[JobOut]:
+    """Attach each job's latest progress message (one query)."""
+    if not jobs:
+        return []
+    latest = select(func.max(JobEvent.id)).where(JobEvent.job_id.in_([j.id for j in jobs])).group_by(JobEvent.job_id)
+    rows = db.execute(select(JobEvent.job_id, JobEvent.message).where(JobEvent.id.in_(latest))).all()
+    last = {r.job_id: r.message for r in rows}
+    return [JobOut.model_validate(j).model_copy(update={"last_message": last.get(j.id)}) for j in jobs]
+
+
 @router.get("/jobs", response_model=list[JobOut], tags=["jobs"])
 def list_jobs(
-    status: str | None = None,
+    status: list[JobStatus] = Query(default=[]),
+    kind: list[str] = Query(default=[]),
+    mine: bool = False,
     limit: int = Query(50, le=200),
     db: Session = Depends(get_db),
     p: Principal = Depends(get_principal),
 ):
+    """This organization's jobs, newest first: any of the given statuses and kinds; `mine` = started by the caller."""
     q = select(Job).where(Job.organization_id == p.org_id).order_by(Job.created_at.desc()).limit(limit)
     if status:
-        q = q.where(Job.status == status)
-    return db.scalars(q).all()
+        q = q.where(Job.status.in_(status))
+    if kind:
+        q = q.where(Job.kind.in_(kind))
+    if mine:
+        q = q.where(Job.created_by == p.user_id)
+    return _with_last_message(db, list(db.scalars(q).all()))
 
 
 @router.get("/jobs/{job_id}", response_model=JobOut, tags=["jobs"])
 def get_job(job_id: uuid.UUID, db: Session = Depends(get_db), p: Principal = Depends(get_principal)):
-    return get_scoped(db, Job, job_id, p, "Job")
+    return _with_last_message(db, [get_scoped(db, Job, job_id, p, "Job")])[0]
 
 
 @router.get("/jobs/{job_id}/events", response_model=list[JobEventOut], tags=["jobs"])
@@ -405,6 +401,7 @@ def cancel_job(job_id: uuid.UUID, db: Session = Depends(get_db), p: Principal = 
 
 @router.post("/jobs/{job_id}/retry", response_model=JobOut, tags=["jobs"])
 def retry(job_id: uuid.UUID, db: Session = Depends(get_db), p: Principal = Depends(get_principal)):
+    p.require(Role.editor)
     job = get_scoped(db, Job, job_id, p, "Job")
     retry_job(db, job)
     db.commit()

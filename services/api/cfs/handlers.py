@@ -3,4 +3,6 @@
 import cfs.ai.alignment  # noqa: F401
 import cfs.ai.assistant  # noqa: F401
 import cfs.ai.extraction  # noqa: F401
+import cfs.ai.mapping  # noqa: F401
 import cfs.ingest.pipeline  # noqa: F401
+import cfs.outlines.job  # noqa: F401

@@ -11,13 +11,15 @@ from __future__ import annotations
 import hashlib
 import re
 import uuid
+from contextlib import contextmanager
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
+from cfs.core.db import get_engine
 from cfs.core.errors import AppError
-from cfs.core.jobs import JobContext, register
+from cfs.core.jobs import JobCancelled, JobContext, register
 from cfs.ingest import ocr
 from cfs.ingest.candidates import EXTRACTOR_VERSION, extract_candidates
 from cfs.ingest.extract import PARSER_VERSION, extract_pages, pdf_line_boxes
@@ -138,11 +140,70 @@ def _chunks(pages: list[DocumentPage], max_words: int = 350) -> list[dict[str, A
     return out
 
 
+@contextmanager
+def ingest_lock(dv_id: uuid.UUID):
+    """Serialize ingestion of one document version across processes (the Documents page and an outline import can
+    start on the same file at once; both would rewrite its pages). A session-level advisory lock held on a
+    dedicated connection, so the caller's commits between stages don't release it."""
+    key = int.from_bytes(uuid.UUID(str(dv_id)).bytes[:8], "big", signed=True)
+    with get_engine().connect() as conn:
+        conn.execute(text("SELECT pg_advisory_lock(:k)"), {"k": key})
+        conn.commit()  # session-level lock survives the commit; the connection isn't left idle in a transaction
+        try:
+            yield
+        finally:
+            conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": key})
+            conn.commit()
+
+
+def is_ingested(db: Session, dv: DocumentVersion) -> bool:
+    return dv.processing_status in (ProcessingStatus.processed, ProcessingStatus.partial) and bool(
+        _done(db, dv.id, "extract_candidates")
+    )
+
+
 @register("ingest_document")
 def ingest_document(db: Session, job: Job, ctx: JobContext) -> dict[str, Any]:
     dv = db.get(DocumentVersion, uuid.UUID(job.payload["document_version_id"]))
     if dv is None or dv.organization_id != job.organization_id:
         raise AppError("document version not found in job scope")
+    return run_ingest(db, dv, ctx, job_id=job.id)
+
+
+def run_ingest(
+    db: Session,
+    dv: DocumentVersion,
+    ctx: JobContext,
+    *,
+    resolve: bool = True,
+    job_id: uuid.UUID | None = None,
+    skip_if_done: bool = False,
+) -> dict[str, Any]:
+    """Run (or resume) every ingestion stage for one document version. Stages are idempotent. `resolve=False`
+    skips raising review items for assigned versions (an outline import reconciles the document itself).
+    `skip_if_done` returns at once if another process finished ingesting while this one waited for the lock.
+    A failure marks the document version `failed` (a cancellation returns it to `uploaded`) and re-raises."""
+    dv_id = dv.id
+    with ingest_lock(dv_id):
+        db.refresh(dv)
+        if skip_if_done and is_ingested(db, dv):
+            return {"skipped": "already ingested"}
+        try:
+            return _run_stages(db, dv, ctx, resolve=resolve, job_id=job_id)
+        except Exception as e:
+            db.rollback()
+            dv = db.get(DocumentVersion, dv_id)
+            if dv is not None:
+                dv.processing_status = (
+                    ProcessingStatus.uploaded if isinstance(e, JobCancelled) else ProcessingStatus.failed
+                )
+                db.commit()
+            raise
+
+
+def _run_stages(
+    db: Session, dv: DocumentVersion, ctx: JobContext, *, resolve: bool, job_id: uuid.UUID | None
+) -> dict[str, Any]:
     dv.processing_status = ProcessingStatus.processing
     db.commit()
     store = get_store()
@@ -282,17 +343,20 @@ def ingest_document(db: Session, job: Job, ctx: JobContext) -> dict[str, Any]:
     from cfs.ingest.resolve import resolve_candidates
 
     resolved = {}
-    for src in db.scalars(select(CurriculumSource).where(CurriculumSource.document_version_id == dv.id)):
-        resolved[str(src.curriculum_version_id)] = resolve_candidates(db, dv, src, run.output["candidates"])
-    db.commit()
-    if not resolved:
-        ctx.event("Document is not assigned to a curriculum version yet; candidates will be resolved on assignment.")
+    if resolve:
+        for src in db.scalars(select(CurriculumSource).where(CurriculumSource.document_version_id == dv.id)):
+            resolved[str(src.curriculum_version_id)] = resolve_candidates(db, dv, src, run.output["candidates"])
+        db.commit()
+        if not resolved:
+            ctx.event(
+                "Document is not assigned to a curriculum version yet; candidates will be resolved on assignment."
+            )
 
     ctx.stage("index", 0.9, "Indexing")
     try:
         from cfs.ai.retrieval import embed_document
 
-        emb = embed_document(db, dv.organization_id, dv.id, job_id=job.id)
+        emb = embed_document(db, dv.organization_id, dv.id, job_id=job_id)
         ctx.event(f"Full-text index updated; {emb['embedded']} chunks embedded with {emb['model']}.")
     except Exception as e:  # noqa: BLE001 — embeddings are optional; retrieval degrades to full-text
         db.rollback()

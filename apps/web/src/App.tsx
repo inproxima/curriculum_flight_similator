@@ -1,8 +1,10 @@
 import { Route, Routes } from "react-router-dom";
 import { usePrograms } from "./api/hooks";
 import { SourceViewer } from "./components/Evidence";
+import { JobCenter } from "./components/JobCenter";
 import { TopBar } from "./components/TopBar";
 import { AiPage } from "./pages/AiPage";
+import { ConnectionsPage } from "./pages/ConnectionsPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { MapPage, evidenceRatio, useGraphForUi } from "./pages/MapPage";
 import { MatrixPage } from "./pages/MatrixPage";
@@ -30,12 +32,14 @@ export function App() {
         <Route path="/sequence" element={<MapPage />} />
         <Route path="/table" element={<TablePage />} />
         <Route path="/matrix" element={<MatrixPage />} />
+        <Route path="/connections" element={<ConnectionsPage />} />
         <Route path="/scenarios/*" element={<ScenariosPage />} />
         <Route path="/reviews" element={<ReviewsPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/ai" element={<AiPage />} />
       </Routes>
       <SourceViewer />
+      <JobCenter />
     </div>
   );
 }

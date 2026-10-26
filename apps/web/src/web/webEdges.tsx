@@ -1,16 +1,24 @@
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type Edge, type EdgeProps } from "@xyflow/react";
 import { memo, useState } from "react";
 import type { WebEdge, WebGap } from "../api/webHooks";
-import { edgeLook } from "./webStyle";
+import { edgeLook, type ColorBy } from "./webStyle";
 
-export type StrengthEdgeData = { edge: WebEdge; diff: boolean; dim: boolean; hl: boolean; selected: boolean; pulse: boolean };
+export type StrengthEdgeData = {
+  edge: WebEdge;
+  diff: boolean;
+  dim: boolean;
+  hl: boolean;
+  selected: boolean;
+  pulse: boolean;
+  colorBy: ColorBy;
+};
 export type StrengthFlowEdge = Edge<StrengthEdgeData, "strength">;
 export type GapFlowEdge = Edge<{ gap: WebGap; dim: boolean }, "gap">;
 
 export const StrengthEdge = memo(function StrengthEdge(p: EdgeProps<StrengthFlowEdge>) {
   const d = p.data!;
   const [hover, setHover] = useState(false);
-  const look = edgeLook(d.edge, { diff: d.diff, dim: d.dim, hl: d.hl || d.selected });
+  const look = edgeLook(d.edge, { diff: d.diff, dim: d.dim, hl: d.hl || d.selected, colorBy: d.colorBy });
   const [path, lx, ly] = getBezierPath(p);
   const showChip = (hover || d.selected || d.hl || (d.diff && d.edge.status !== "unchanged")) && !d.dim && look.chip;
   return (

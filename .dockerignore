@@ -1,0 +1,17 @@
+# Keep secrets, real source documents, local data and build output out of images.
+.git
+.env
+.env.*
+!.env.example
+outputs/
+data/
+**/node_modules
+**/.pnpm-store
+**/.venv
+**/__pycache__
+**/*.pyc
+apps/web/dist
+apps/web/test-results
+apps/web/playwright-report
+**/*.tsbuildinfo
+infra/terraform

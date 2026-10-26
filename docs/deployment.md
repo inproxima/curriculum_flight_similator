@@ -1,5 +1,7 @@
 # Deploying to AWS
 
+> The public no-sign-in prototype runs on Render instead; see [hosting-render.md](hosting-render.md).
+
 Infrastructure is defined in [`infra/terraform`](../infra/terraform). It has passed `terraform validate` but has
 **not been applied**: no AWS resources were created while building it. Applying it creates billable resources in
 your account. Review the plan and the cost notes first.

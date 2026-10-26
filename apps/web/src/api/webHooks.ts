@@ -70,3 +70,36 @@ export function useLinkDecisions(versionId: string | null) {
     }),
   };
 }
+
+export interface MapPreview {
+  route: string;
+  model: string;
+  calls: number;
+  estimate_usd: number;
+  courses: number;
+  elements: number;
+  draft: boolean;
+  cost_cap_usd: number;
+  batches: { kind: string; label: string; sources: number; estimate_usd: number }[];
+}
+
+/** What mapping connections would cost (no model call). */
+export function useMapPreview(versionId: string | null, courseIds: string[], enabled: boolean) {
+  return useQuery({
+    queryKey: ["map-preview", versionId, courseIds],
+    enabled: !!versionId && enabled,
+    staleTime: 30_000,
+    queryFn: () =>
+      getJson<MapPreview>(`${V1}/versions/${versionId}/ai-map/preview${qs({ course_id: courseIds.length ? courseIds : undefined })}`),
+  });
+}
+
+export function useMapRun(versionId: string | null) {
+  return useMutation({
+    mutationFn: (b: { course_ids: string[] | null; forward?: boolean; max_cost_usd?: number | null }) =>
+      getJson<{ job_id: string; calls: number; estimate_usd: number; cost_cap_usd: number; model: string }>(
+        `${V1}/versions/${versionId}/ai-map`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) },
+      ),
+  });
+}

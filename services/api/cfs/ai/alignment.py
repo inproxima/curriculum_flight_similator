@@ -32,7 +32,7 @@ from cfs.graph.queries import owner_courses
 from cfs.graph.snapshot import Snapshot, load_snapshot
 from cfs.ingest.pipeline import review_item
 from cfs.ingest.text import find_span
-from cfs.models import EntityFieldEvidence, EvidenceSpan, Job
+from cfs.models import CurriculumEntityMembership, EntityFieldEvidence, EvidenceSpan, Job
 from cfs.models.enums import (
     ContributionLevel,
     EvidenceBasis,
@@ -208,6 +208,33 @@ def _spans(db: Session, e: dict[str, Any]) -> list[uuid.UUID]:
     )[:3]
 
 
+def still_members(db: Session, version_id: uuid.UUID, ids: list[str]) -> set[str]:
+    """Which of these elements are members of the version right now (the snapshot may be older)."""
+    if not ids:
+        return set()
+    return {
+        str(i)
+        for i in db.scalars(
+            select(CurriculumEntityMembership.entity_id).where(
+                CurriculumEntityMembership.curriculum_version_id == version_id,
+                CurriculumEntityMembership.entity_id.in_([uuid.UUID(x) for x in ids]),
+            )
+        )
+    }
+
+
+def existing_link_reason(snap: Snapshot, rel_type: str, source: str, target: str) -> str | None:
+    """Why a proposed link between two existing elements must not be written: documented links outrank AI, no
+    duplicates, and a link a reviewer rejected is never proposed again. None when the link is new."""
+    for r in snap.rels(rel_type, source=source, target=target):
+        if r["review_state"] == "rejected":
+            return "a reviewer rejected this link before"
+        if r["review_state"] == "proposed":
+            return "this link is already proposed; accept it on the web"
+        return "link already exists"
+    return None
+
+
 def verify(snap: Snapshot, b: dict[str, Any], link: dict[str, Any]) -> tuple[dict | None, str | None]:
     """Return (normalized link, None) or (None, reason it was dropped)."""
     scope = {e["key"]: e for e in [*b["sources"], *b["targets"]]}
@@ -224,10 +251,8 @@ def verify(snap: Snapshot, b: dict[str, Any], link: dict[str, Any]) -> tuple[dic
     quote = (link.get("quote") or "").strip()
     if not quote or not (find_span(_text(s), quote) or find_span(_text(t), quote)):
         return None, "quote not found in either element's text"
-    for r in snap.rels(rt, source=s["id"], target=t["id"]):
-        if r["review_state"] == "rejected":
-            return None, "a reviewer rejected this link before"
-        return None, "link already exists"
+    if why := existing_link_reason(snap, rt, s["id"], t["id"]):
+        return None, why
     try:
         strength = min(1.0, max(0.0, float(link["strength"])))
     except (TypeError, ValueError):
@@ -283,12 +308,18 @@ def propose_alignment(
             use_cache_key=gateway.cache_key("align", ALIGN_PROMPT_VERSION, user),
         )
         runs.append(str(run_id))
+        # the model call took a while: lock the version and write only between elements that are still members
+        assert_draft(db, version_id, lock=True)
+        current = still_members(db, version_id, [e["id"] for e in (*b["sources"], *b["targets"])])
         for link in (res.parsed or {}).get("links", []):
             v, why = verify(snap, b, link)
             if v is None:
                 dropped.append({"batch": b["label"], "link": link, "reason": why})
                 continue
             s, t = v["source"], v["target"]
+            if s["id"] not in current or t["id"] not in current:
+                dropped.append({"batch": b["label"], "link": link, "reason": "an element left the version meanwhile"})
+                continue
             rel = create_relationship(
                 db,
                 org_id,

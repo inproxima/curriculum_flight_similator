@@ -1,9 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { useAiStatus, waitForJob } from "../api/aiHooks";
+import { useAiStatus } from "../api/aiHooks";
 import { ApiError } from "../api/client";
-import { useLinkDecisions, type WebView } from "../api/webHooks";
+import { useAiJobs } from "../api/hooks";
+import { useLinkDecisions, useMapPreview, useMapRun, type WebView } from "../api/webHooks";
 import { useUi } from "../store/ui";
+import { isActive, payloadOf } from "./jobCenterModel";
 import {
   HORIZONTAL_KINDS,
   LINK_KIND_LABEL,
@@ -13,7 +15,18 @@ import {
   type LinkKind,
   type WebFilters,
 } from "../web/webFilters";
-import { PROVENANCE_DASH, PROVENANCE_TEXT, STRENGTH_TEXT, STRENGTH_WIDTH, TYPE_COLOR } from "../web/webStyle";
+import {
+  CONNECTION_COLOR,
+  CONNECTION_GLYPH,
+  CONNECTION_HELP,
+  CONNECTION_LEVELS,
+  CONNECTION_TEXT,
+  PROVENANCE_DASH,
+  PROVENANCE_TEXT,
+  STRENGTH_TEXT,
+  STRENGTH_WIDTH,
+  TYPE_COLOR,
+} from "../web/webStyle";
 
 function toggle<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
@@ -45,17 +58,25 @@ export function LayersPanel({ view, onReviewProposed }: { view: WebView | undefi
     const labels: Record<string, number> = {};
     const prov: Record<string, number> = {};
     const types: Record<string, number> = {};
-    if (!view) return { kinds, labels, prov, types };
+    const conn: Record<string, number> = {};
+    const mapState = { none: 0, unmapped: 0 };
+    if (!view) return { kinds, labels, prov, types, conn, mapState };
     const byId = new Map(view.nodes.map((n) => [n.id, n]));
-    for (const n of view.nodes) types[n.type] = (types[n.type] ?? 0) + 1;
+    const primary: Record<string, string> = { course_outcome: "contributes_to", assessment: "assesses", topic: "supports" };
+    for (const n of view.nodes) {
+      types[n.type] = (types[n.type] ?? 0) + 1;
+      const m = n.mapping?.[primary[n.type] ?? ""];
+      if (m && !m.best) m.verdict === "none" ? (mapState.none += 1) : (mapState.unmapped += 1);
+    }
     for (const e of view.edges) {
       if (e.bundle) continue;
       const k = linkKind(e, byId);
       kinds[k] = (kinds[k] ?? 0) + 1;
       if (e.strength?.label) labels[e.strength.label] = (labels[e.strength.label] ?? 0) + 1;
+      if (e.connection) conn[e.connection] = (conn[e.connection] ?? 0) + 1;
       prov[e.provenance] = (prov[e.provenance] ?? 0) + 1;
     }
-    return { kinds, labels, prov, types };
+    return { kinds, labels, prov, types, conn, mapState };
   }, [view]);
 
   const set = (p: Partial<WebFilters>) => setWebFilters(p);
@@ -103,6 +124,34 @@ export function LayersPanel({ view, onReviewProposed }: { view: WebView | undefi
       <section>
         <h4>Structure</h4>
         {(["containment", "overlap"] as LinkKind[]).map(kindBox)}
+      </section>
+      <section>
+        <h4>Connection level</h4>
+        {CONNECTION_LEVELS.map((c) => (
+          <label key={c} className="row layer-row" title={CONNECTION_HELP[c]}>
+            <input type="checkbox" checked={(f.connections ?? CONNECTION_LEVELS).includes(c)} onChange={() => set({ connections: toggle(f.connections ?? [...CONNECTION_LEVELS], c) })} />
+            <Line color={CONNECTION_COLOR[c]} width={3} />
+            <span className="grow">{CONNECTION_TEXT[c]} <span className="muted small" aria-hidden>{CONNECTION_GLYPH[c]}</span></span>
+            <span className="muted small">{counts.conn[c] ?? 0}</span>
+          </label>
+        ))}
+        <div className="row layer-row small" title="The AI mapping examined these elements and found no connection">
+          <span className="map-chip none" aria-hidden>✗</span>
+          <span className="grow">No connection found (AI)</span>
+          <span className="muted small">{counts.mapState.none}</span>
+        </div>
+        <div className="row layer-row small" title="Not examined by the AI mapping yet">
+          <span className="map-chip unmapped" aria-hidden>?</span>
+          <span className="grow">Not mapped yet</span>
+          <span className="muted small">{counts.mapState.unmapped}</span>
+        </div>
+        <fieldset className="row small" style={{ marginTop: 4 }}>
+          <legend className="sr-only">Colour links by</legend>
+          <span className="muted">Colour links by</span>
+          <label className="row"><input type="radio" name="colorBy" checked={(f.colorBy ?? "connection") === "connection"} onChange={() => set({ colorBy: "connection" })} /> level</label>
+          <label className="row"><input type="radio" name="colorBy" checked={f.colorBy === "type"} onChange={() => set({ colorBy: "type" })} /> type</label>
+        </fieldset>
+        {view && <MapConnections view={view} />}
       </section>
       <section>
         <h4>Strength</h4>
@@ -163,7 +212,7 @@ function ProposeLinks({ view }: { view: WebView }) {
   const status = useAiStatus();
   const qc = useQueryClient();
   const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const running = useRunning("ai_propose_alignment", versionId);
   const route = status.data?.routes.find((r) => r.name === "synthesize");
   const published = view.curriculum_version.status !== "draft";
   const course = selection?.kind === "node" ? view.nodes.find((n) => n.id === selection.id && n.type === "course") : undefined;
@@ -175,27 +224,77 @@ function ProposeLinks({ view }: { view: WebView }) {
         ? route.unavailable_reasons.join("; ")
         : null;
   const run = async () => {
-    setBusy(true);
-    setMsg("Asking the synthesis model…");
+    setMsg(null);
     try {
-      const r = await dec.propose.mutateAsync({ course_ids: course ? [course.id] : null });
-      await waitForJob(r.job_id, (m) => m && setMsg(m));
-      setMsg("Done. New proposals are drawn dashed; review them from the list above.");
-      for (const k of ["web", "graph", "reviews"]) qc.invalidateQueries({ queryKey: [k] });
+      await dec.propose.mutateAsync({ course_ids: course ? [course.id] : null });
+      qc.invalidateQueries({ queryKey: ["ai-jobs"] });
+      setMsg("Started. Progress and the result are shown at the bottom right.");
     } catch (e) {
       setMsg(e instanceof ApiError ? e.message : String(e));
-    } finally {
-      setBusy(false);
     }
   };
   return (
     <div style={{ marginTop: 6 }}>
-      <button className="small" disabled={!!why || busy} onClick={run}
+      <button className="small" disabled={!!why || !!running || dec.propose.isPending} onClick={run}
         title={why ?? `Sends outcome statements, assessment titles, and topic names to ${route?.active?.join(" · ") ?? "the synthesis model"}`}>
-        {busy ? "Proposing…" : course ? `Propose missing links for ${course.key} (AI)` : "Propose missing links (AI)"}
+        {running ? `Proposing… ${Math.round(running.progress * 100)}%` : course ? `Propose missing links for ${course.key} (AI)` : "Propose missing links (AI)"}
       </button>
       {why && <div className="muted small">{why}</div>}
       {msg && <div className="muted small" aria-live="polite">{msg}</div>}
     </div>
   );
+}
+
+/** Map every outcome, assessment and topic (the selected course, or the whole program) with the AI: proposes each
+ *  element's connections with a level, or records that it found none. Shows the cost before anything is sent. */
+export function MapConnections({ view, courseId }: { view: WebView; courseId?: string | null }) {
+  const { versionId, scenarioId, selection } = useUi();
+  const status = useAiStatus();
+  const qc = useQueryClient();
+  const run = useMapRun(versionId);
+  const [msg, setMsg] = useState<string | null>(null);
+  const running = useRunning("ai_map_alignment", versionId);
+  const route = status.data?.routes.find((r) => r.name === "synthesize");
+  const published = view.curriculum_version.status !== "draft";
+  const picked = courseId !== undefined ? courseId : selection?.kind === "node" ? selection.id : null;
+  const course = picked ? view.nodes.find((n) => n.id === picked && n.type === "course") : undefined;
+  const why = scenarioId
+    ? "Leave the scenario to map the draft itself."
+    : published
+      ? "Mapping writes proposals to draft versions only; select or create a draft version."
+      : route && !route.available
+        ? route.unavailable_reasons.join("; ")
+        : null;
+  const preview = useMapPreview(versionId, course ? [course.id] : [], !why);
+  const p = preview.data;
+  const go = async () => {
+    if (!p) return;
+    const what = course ? course.key : `all ${p.courses} courses`;
+    if (!window.confirm(`Map ${what} with the AI? ${p.calls} call(s) to ${p.model}, about $${p.estimate_usd.toFixed(2)} (limit $${p.cost_cap_usd.toFixed(2)}). Element texts are sent to the provider; results are proposals.`)) return;
+    setMsg(null);
+    try {
+      await run.mutateAsync({ course_ids: course ? [course.id] : null });
+      qc.invalidateQueries({ queryKey: ["ai-jobs"] });
+      setMsg("Started. Progress and the result are shown at the bottom right; you can keep working.");
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : String(e));
+    }
+  };
+  return (
+    <div style={{ marginTop: 6 }}>
+      <button className="small primary" disabled={!!why || !!running || run.isPending || !p || !p.calls} onClick={go}
+        title={why ?? `Every outcome, assessment and topic is checked against its possible targets by ${route?.active?.join(" · ") ?? "the synthesis model"}`}>
+        {running ? `Mapping… ${Math.round(running.progress * 100)}%` : course ? `Map ${course.key}'s connections (AI)` : "Map all connections (AI)"}
+      </button>
+      {!why && p && <div className="muted small">{p.calls} call(s) · about ${p.estimate_usd.toFixed(2)} · {p.elements} element(s)</div>}
+      {why && <div className="muted small">{why}</div>}
+      {msg && <div className="muted small" aria-live="polite">{msg}</div>}
+    </div>
+  );
+}
+
+/** The running AI job of a kind for this version, if any (shared with the job center's query). */
+function useRunning(kind: string, versionId: string | null) {
+  const jobs = useAiJobs();
+  return jobs.data?.find((j) => j.kind === kind && isActive(j) && payloadOf(j).curriculum_version_id === versionId);
 }

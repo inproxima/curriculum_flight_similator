@@ -128,6 +128,8 @@ class SpanOut(ORM):
     bbox: list | None
     document_title: str | None = None
     document_type: str | None = None
+    mime_type: str | None = None
+    page_count: int | None = None
     publication_date: date | None = None
     academic_year: str | None = None
     is_synthetic: bool = False
@@ -146,6 +148,7 @@ class JobOut(ORM):
     error: str | None
     created_at: datetime
     updated_at: datetime
+    last_message: str | None = None  # the latest progress event, e.g. "Call 7/33: BCEM 393 → later courses"
 
 
 class JobEventOut(ORM):

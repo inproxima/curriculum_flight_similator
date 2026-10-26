@@ -40,10 +40,14 @@ export function SourceViewer() {
   const [width, setWidth] = useState(800);
   const [pageSize, setPageSize] = useState<{ w: number; h: number } | null>(null);
   const [text, setText] = useState<string | null>(null);
-  const isPdf = true;
+  // Text, DOCX and pasted sources are not PDFs: show their extracted page text instead of handing them to PDF.js
+  // (which throws on non-PDF bytes).
+  const isPdf = !span?.mime_type || span.mime_type === "application/pdf";
 
   useEffect(() => {
     if (span) setPage(span.page_number);
+    // PDF.js reports the page count for PDFs; text sources report it with the span
+    if (span && span.mime_type && span.mime_type !== "application/pdf") setNumPages(span.page_count ?? 0);
   }, [span]);
 
   useEffect(() => {
@@ -88,6 +92,12 @@ export function SourceViewer() {
                   <p className="muted small">Exact coordinates are not available for this passage; the quoted text above is the evidence.</p>
                 )}
               </>
+            )}
+            {span && !isPdf && (
+              <div>
+                <p className="muted small">Extracted text of page {page} ({span.mime_type}):</p>
+                <pre style={{ whiteSpace: "pre-wrap" }}>{renderTextWithSpan(text, span.page_number === page ? span : null)}</pre>
+              </div>
             )}
             {fileUrl && isPdf && (
               <Document

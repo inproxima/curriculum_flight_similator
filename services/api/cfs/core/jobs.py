@@ -54,6 +54,19 @@ class JobContext:
         if self.job.cancel_requested:
             raise JobCancelled()
 
+    def scaled(self, lo: float, hi: float) -> JobContext:
+        """A context whose stage progress (0–1) maps into [lo, hi] of this job, for stages run inside another job."""
+        return _ScaledContext(self, lo, hi)
+
+
+class _ScaledContext(JobContext):
+    def __init__(self, parent: JobContext, lo: float, hi: float):
+        super().__init__(parent.db, parent.job)
+        self.parent, self.lo, self.hi = parent, lo, hi
+
+    def stage(self, name: str, progress: float, message: str = "", data: dict | None = None) -> None:
+        self.parent.stage(name, self.lo + (self.hi - self.lo) * max(0.0, min(1.0, progress)), message, data)
+
 
 def register(kind: str):
     def deco(fn):
@@ -85,8 +98,14 @@ def create_job(
 
 def enqueue(job_id: uuid.UUID) -> None:
     """Dispatch after the creating transaction commits."""
-    if get_settings().task_always_eager:
+    s = get_settings()
+    if s.task_always_eager:
         run_job(job_id)
+        return
+    if s.job_runner == "thread":
+        from cfs.core.runner import submit
+
+        submit(job_id)
         return
     from cfs.worker_tasks import run_job_task
 

@@ -169,7 +169,27 @@ export function useJobs(activeOnly = false) {
     queryKey: ["jobs", activeOnly],
     refetchInterval: 4000,
     queryFn: async () =>
-      unwrap(await api.GET("/api/v1/jobs", { params: { query: activeOnly ? { status: "running" } : {} } })),
+      unwrap(await api.GET("/api/v1/jobs", { params: { query: activeOnly ? { status: ["queued", "running"] } : {} } })),
+  });
+}
+
+/** The caller's AI jobs (connection mapping, link proposals), newest first. Polls every 2 s while one runs, and
+ *  keeps polling in a background tab so the tab title can say when it is done. */
+export function useAiJobs() {
+  return useQuery({
+    queryKey: ["ai-jobs"],
+    refetchInterval: (q) => (q.state.data?.some((j) => j.status === "queued" || j.status === "running") ? 2000 : 15000),
+    refetchIntervalInBackground: true,
+    queryFn: async () => {
+      const kind = ["ai_map_alignment", "ai_propose_alignment"];
+      // running jobs are fetched on their own so newer finished ones can never push them out of the page
+      const [active, recent] = await Promise.all([
+        api.GET("/api/v1/jobs", { params: { query: { kind, mine: true, status: ["queued", "running"], limit: 20 } } }).then(unwrap),
+        api.GET("/api/v1/jobs", { params: { query: { kind, mine: true, limit: 10 } } }).then(unwrap),
+      ]);
+      const ids = new Set(active.map((j) => j.id));
+      return [...active, ...recent.filter((j) => !ids.has(j.id))];
+    },
   });
 }
 
@@ -200,6 +220,8 @@ export function useDecideReview() {
       qc.invalidateQueries({ queryKey: ["graph"] });
       qc.invalidateQueries({ queryKey: ["entity"] });
       qc.invalidateQueries({ queryKey: ["table"] });
+      qc.invalidateQueries({ queryKey: ["web"] });
+      qc.invalidateQueries({ queryKey: ["missing"] });
     },
   });
 }

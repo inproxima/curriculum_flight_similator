@@ -48,6 +48,92 @@
     "title": "AlignmentRequest",
     "type": "object"
    },
+   "Body_create_outline_import_api_v1_versions__version_id__courses__course_id__outline_imports_post": {
+    "properties": {
+     "academic_year": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Academic Year"
+     },
+     "alias_codes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Alias Codes"
+     },
+     "document_version_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document Version Id"
+     },
+     "file": {
+      "anyOf": [
+       {
+        "contentMediaType": "application/octet-stream",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File"
+     },
+     "pasted_text": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pasted Text"
+     },
+     "publication_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Publication Date"
+     },
+     "title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Title"
+     }
+    },
+    "title": "Body_create_outline_import_api_v1_versions__version_id__courses__course_id__outline_imports_post",
+    "type": "object"
+   },
    "Body_upload_document_api_v1_documents_post": {
     "properties": {
      "academic_year": {
@@ -262,6 +348,58 @@
      "curriculum_version_id"
     ],
     "title": "ConversationIn",
+    "type": "object"
+   },
+   "CourseMissingOut": {
+    "properties": {
+     "counts": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "title": "Counts",
+      "type": "object"
+     },
+     "course_id": {
+      "title": "Course Id",
+      "type": "string"
+     },
+     "course_key": {
+      "title": "Course Key",
+      "type": "string"
+     },
+     "fillable": {
+      "title": "Fillable",
+      "type": "integer"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/MissingPiece"
+      },
+      "title": "Items",
+      "type": "array"
+     },
+     "program": {
+      "items": {
+       "$ref": "#/components/schemas/MissingPiece"
+      },
+      "title": "Program",
+      "type": "array"
+     },
+     "total": {
+      "title": "Total",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "course_id",
+     "course_key",
+     "items",
+     "program",
+     "counts",
+     "total",
+     "fillable"
+    ],
+    "title": "CourseMissingOut",
     "type": "object"
    },
    "CoursePair": {
@@ -940,6 +1078,17 @@
       "title": "Kind",
       "type": "string"
      },
+     "last_message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Message"
+     },
      "payload": {
       "additionalProperties": true,
       "title": "Payload",
@@ -987,6 +1136,18 @@
     ],
     "title": "JobOut",
     "type": "object"
+   },
+   "JobStatus": {
+    "enum": [
+     "queued",
+     "running",
+     "succeeded",
+     "partial",
+     "failed",
+     "cancelled"
+    ],
+    "title": "JobStatus",
+    "type": "string"
    },
    "LinkDecisionIn": {
     "properties": {
@@ -1106,6 +1267,80 @@
     "title": "LinkDecisionOut",
     "type": "object"
    },
+   "LinkEdit": {
+    "properties": {
+     "level": {
+      "anyOf": [
+       {
+        "enum": [
+         "introduce",
+         "reinforce",
+         "assess",
+         ""
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Level"
+     },
+     "strength": {
+      "anyOf": [
+       {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strength"
+     }
+    },
+    "title": "LinkEdit",
+    "type": "object"
+   },
+   "MapRequest": {
+    "properties": {
+     "course_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Course Ids"
+     },
+     "forward": {
+      "default": true,
+      "title": "Forward",
+      "type": "boolean"
+     },
+     "max_cost_usd": {
+      "anyOf": [
+       {
+        "exclusiveMinimum": 0.0,
+        "maximum": 25.0,
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Cost Usd"
+     }
+    },
+    "title": "MapRequest",
+    "type": "object"
+   },
    "MessageIn": {
     "properties": {
      "mode": {
@@ -1127,6 +1362,774 @@
      "text"
     ],
     "title": "MessageIn",
+    "type": "object"
+   },
+   "MissingPiece": {
+    "properties": {
+     "entity_ids": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Entity Ids",
+      "type": "array"
+     },
+     "fillable": {
+      "title": "Fillable",
+      "type": "boolean"
+     },
+     "id": {
+      "title": "Id",
+      "type": "string"
+     },
+     "kind": {
+      "title": "Kind",
+      "type": "string"
+     },
+     "message": {
+      "title": "Message",
+      "type": "string"
+     },
+     "severity": {
+      "title": "Severity",
+      "type": "string"
+     },
+     "source": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Source"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target"
+     },
+     "why": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Why"
+     }
+    },
+    "required": [
+     "id",
+     "kind",
+     "severity",
+     "message",
+     "entity_ids",
+     "fillable"
+    ],
+    "title": "MissingPiece",
+    "type": "object"
+   },
+   "NodeMapping": {
+    "properties": {
+     "best": {
+      "anyOf": [
+       {
+        "enum": [
+         "direct",
+         "strong",
+         "partial"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Best"
+     },
+     "count": {
+      "default": 0,
+      "title": "Count",
+      "type": "integer"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     },
+     "verdict": {
+      "anyOf": [
+       {
+        "enum": [
+         "linked",
+         "none"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Verdict"
+     }
+    },
+    "title": "NodeMapping",
+    "type": "object"
+   },
+   "OutlineImportBrief": {
+    "properties": {
+     "applied_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Applied At"
+     },
+     "counts": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "integer"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Counts"
+     },
+     "course_entity_id": {
+      "format": "uuid",
+      "title": "Course Entity Id",
+      "type": "string"
+     },
+     "course_key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Course Key"
+     },
+     "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+     },
+     "curriculum_version_id": {
+      "format": "uuid",
+      "title": "Curriculum Version Id",
+      "type": "string"
+     },
+     "document_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document Title"
+     },
+     "document_version_id": {
+      "format": "uuid",
+      "title": "Document Version Id",
+      "type": "string"
+     },
+     "error": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "job_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Job Id"
+     },
+     "options": {
+      "additionalProperties": true,
+      "title": "Options",
+      "type": "object"
+     },
+     "outline_year": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Outline Year"
+     },
+     "reverted_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reverted At"
+     },
+     "status": {
+      "enum": [
+       "queued",
+       "running",
+       "ready",
+       "applied",
+       "discarded",
+       "failed",
+       "reverted"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+     },
+     "warnings": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "curriculum_version_id",
+     "course_entity_id",
+     "document_version_id",
+     "status",
+     "options",
+     "created_at",
+     "updated_at"
+    ],
+    "title": "OutlineImportBrief",
+    "type": "object"
+   },
+   "OutlineImportCreated": {
+    "properties": {
+     "duplicate_document": {
+      "title": "Duplicate Document",
+      "type": "boolean"
+     },
+     "job_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Job Id"
+     },
+     "outline_import": {
+      "$ref": "#/components/schemas/OutlineImportBrief"
+     },
+     "reused": {
+      "title": "Reused",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "outline_import",
+     "job_id",
+     "duplicate_document",
+     "reused"
+    ],
+    "title": "OutlineImportCreated",
+    "type": "object"
+   },
+   "OutlineImportOut": {
+    "properties": {
+     "applied_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Applied At"
+     },
+     "counts": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "integer"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Counts"
+     },
+     "course_entity_id": {
+      "format": "uuid",
+      "title": "Course Entity Id",
+      "type": "string"
+     },
+     "course_key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Course Key"
+     },
+     "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+     },
+     "curriculum_version_id": {
+      "format": "uuid",
+      "title": "Curriculum Version Id",
+      "type": "string"
+     },
+     "document_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document Title"
+     },
+     "document_version_id": {
+      "format": "uuid",
+      "title": "Document Version Id",
+      "type": "string"
+     },
+     "error": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error"
+     },
+     "etag": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Etag"
+     },
+     "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+     },
+     "job_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Job Id"
+     },
+     "options": {
+      "additionalProperties": true,
+      "title": "Options",
+      "type": "object"
+     },
+     "outline_year": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Outline Year"
+     },
+     "plan": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/OutlinePlan"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "result": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/OutlineResult"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "reverted_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reverted At"
+     },
+     "status": {
+      "enum": [
+       "queued",
+       "running",
+       "ready",
+       "applied",
+       "discarded",
+       "failed",
+       "reverted"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+     },
+     "warnings": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "curriculum_version_id",
+     "course_entity_id",
+     "document_version_id",
+     "status",
+     "options",
+     "created_at",
+     "updated_at"
+    ],
+    "title": "OutlineImportOut",
+    "type": "object"
+   },
+   "OutlinePlan": {
+    "properties": {
+     "agent": {
+      "additionalProperties": true,
+      "title": "Agent",
+      "type": "object"
+     },
+     "course": {
+      "additionalProperties": true,
+      "title": "Course",
+      "type": "object"
+     },
+     "document": {
+      "additionalProperties": true,
+      "title": "Document",
+      "type": "object"
+     },
+     "dropped": {
+      "items": {
+       "$ref": "#/components/schemas/PlanDrop"
+      },
+      "title": "Dropped",
+      "type": "array"
+     },
+     "edition": {
+      "$ref": "#/components/schemas/PlanEdition"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/PlanItem"
+      },
+      "title": "Items",
+      "type": "array"
+     },
+     "missing_before": {
+      "items": {
+       "$ref": "#/components/schemas/MissingPiece"
+      },
+      "title": "Missing Before",
+      "type": "array"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Notes",
+      "type": "array"
+     },
+     "program_missing": {
+      "items": {
+       "$ref": "#/components/schemas/MissingPiece"
+      },
+      "title": "Program Missing",
+      "type": "array"
+     },
+     "sections": {
+      "items": {
+       "$ref": "#/components/schemas/PlanSection"
+      },
+      "title": "Sections",
+      "type": "array"
+     },
+     "summary": {
+      "$ref": "#/components/schemas/PlanSummary"
+     },
+     "unfillable": {
+      "items": {
+       "$ref": "#/components/schemas/MissingPiece"
+      },
+      "title": "Unfillable",
+      "type": "array"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+     }
+    },
+    "required": [
+     "course",
+     "document",
+     "edition",
+     "sections",
+     "items",
+     "missing_before",
+     "program_missing",
+     "unfillable",
+     "warnings",
+     "dropped",
+     "notes",
+     "agent",
+     "summary"
+    ],
+    "title": "OutlinePlan",
+    "type": "object"
+   },
+   "OutlineResult": {
+    "properties": {
+     "applied": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Applied",
+      "type": "array"
+     },
+     "counts": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "title": "Counts",
+      "type": "object"
+     },
+     "edits": {
+      "additionalProperties": true,
+      "title": "Edits",
+      "type": "object"
+     },
+     "map_estimate_usd": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Map Estimate Usd"
+     },
+     "map_job_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Map Job Id"
+     },
+     "missing_after": {
+      "items": {
+       "$ref": "#/components/schemas/MissingPiece"
+      },
+      "title": "Missing After",
+      "type": "array"
+     },
+     "new_entities": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "title": "New Entities",
+      "type": "object"
+     },
+     "program_after": {
+      "items": {
+       "$ref": "#/components/schemas/MissingPiece"
+      },
+      "title": "Program After",
+      "type": "array"
+     },
+     "summary": {
+      "additionalProperties": true,
+      "title": "Summary",
+      "type": "object"
+     }
+    },
+    "required": [
+     "applied",
+     "edits",
+     "counts",
+     "new_entities",
+     "missing_after",
+     "program_after",
+     "summary"
+    ],
+    "title": "OutlineResult",
+    "type": "object"
+   },
+   "OutlineYear": {
+    "properties": {
+     "academic_year": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Academic Year"
+     },
+     "publication_date": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Publication Date"
+     },
+     "quote": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Quote"
+     },
+     "source": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Source"
+     },
+     "start_year": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start Year"
+     }
+    },
+    "title": "OutlineYear",
     "type": "object"
    },
    "Page": {
@@ -1242,6 +2245,678 @@
      "name"
     ],
     "title": "PathwayOut",
+    "type": "object"
+   },
+   "PlanAgent": {
+    "properties": {
+     "decided_by": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decided By"
+     },
+     "decision": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decision"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     },
+     "skip": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Skip"
+     }
+    },
+    "title": "PlanAgent",
+    "type": "object"
+   },
+   "PlanDiff": {
+    "properties": {
+     "after": {
+      "title": "After"
+     },
+     "before": {
+      "title": "Before"
+     },
+     "field": {
+      "title": "Field",
+      "type": "string"
+     }
+    },
+    "required": [
+     "field"
+    ],
+    "title": "PlanDiff",
+    "type": "object"
+   },
+   "PlanDrop": {
+    "properties": {
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "what": {
+      "title": "What",
+      "type": "string"
+     }
+    },
+    "required": [
+     "what",
+     "reason"
+    ],
+    "title": "PlanDrop",
+    "type": "object"
+   },
+   "PlanEdition": {
+    "properties": {
+     "fit": {
+      "enum": [
+       "match",
+       "older",
+       "later",
+       "unknown"
+      ],
+      "title": "Fit",
+      "type": "string"
+     },
+     "outline": {
+      "$ref": "#/components/schemas/OutlineYear"
+     },
+     "version": {
+      "$ref": "#/components/schemas/VersionYear"
+     }
+    },
+    "required": [
+     "outline",
+     "version",
+     "fit"
+    ],
+    "title": "PlanEdition",
+    "type": "object"
+   },
+   "PlanEnd": {
+    "properties": {
+     "entity_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Entity Id"
+     },
+     "key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Key"
+     },
+     "label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "new": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "New"
+     },
+     "number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Number"
+     },
+     "ref": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ref"
+     },
+     "short": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Short"
+     },
+     "type": {
+      "title": "Type",
+      "type": "string"
+     }
+    },
+    "required": [
+     "type"
+    ],
+    "title": "PlanEnd",
+    "type": "object"
+   },
+   "PlanEvidence": {
+    "properties": {
+     "field": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Field"
+     },
+     "page": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Page"
+     },
+     "quote": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Quote"
+     },
+     "source": {
+      "enum": [
+       "outline",
+       "element"
+      ],
+      "title": "Source",
+      "type": "string"
+     },
+     "span_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Span Id"
+     }
+    },
+    "required": [
+     "source"
+    ],
+    "title": "PlanEvidence",
+    "type": "object"
+   },
+   "PlanItem": {
+    "properties": {
+     "action": {
+      "enum": [
+       "add",
+       "replace",
+       "keep",
+       "retire",
+       "detach",
+       "set_field",
+       "link"
+      ],
+      "title": "Action",
+      "type": "string"
+     },
+     "agent": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PlanAgent"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "blocked_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Blocked Reason"
+     },
+     "carries_links": {
+      "default": 0,
+      "title": "Carries Links",
+      "type": "integer"
+     },
+     "default_selected": {
+      "title": "Default Selected",
+      "type": "boolean"
+     },
+     "depends_on": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Depends On",
+      "type": "array"
+     },
+     "diff": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/PlanDiff"
+      },
+      "title": "Diff",
+      "type": "array"
+     },
+     "drops_links": {
+      "default": 0,
+      "title": "Drops Links",
+      "type": "integer"
+     },
+     "evidence": {
+      "default": [],
+      "items": {
+       "$ref": "#/components/schemas/PlanEvidence"
+      },
+      "title": "Evidence",
+      "type": "array"
+     },
+     "excludes": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Excludes",
+      "type": "array"
+     },
+     "fills": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Fills",
+      "type": "array"
+     },
+     "id": {
+      "title": "Id",
+      "type": "string"
+     },
+     "key_preview": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Key Preview"
+     },
+     "link": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PlanLink"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "noop": {
+      "title": "Noop",
+      "type": "boolean"
+     },
+     "proposed": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proposed"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "section": {
+      "enum": [
+       "outcomes",
+       "assessments",
+       "topics",
+       "course",
+       "links"
+      ],
+      "title": "Section",
+      "type": "string"
+     },
+     "selectable": {
+      "title": "Selectable",
+      "type": "boolean"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PlanEnd"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "section",
+     "action",
+     "title",
+     "noop",
+     "selectable",
+     "default_selected",
+     "reason"
+    ],
+    "title": "PlanItem",
+    "type": "object"
+   },
+   "PlanLink": {
+    "properties": {
+     "basis": {
+      "enum": [
+       "stated",
+       "inferred"
+      ],
+      "title": "Basis",
+      "type": "string"
+     },
+     "level": {
+      "anyOf": [
+       {
+        "enum": [
+         "introduce",
+         "reinforce",
+         "assess"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Level"
+     },
+     "model_strength": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Strength"
+     },
+     "rationale": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rationale"
+     },
+     "rel_type": {
+      "enum": [
+       "assesses",
+       "supports",
+       "contributes_to"
+      ],
+      "title": "Rel Type",
+      "type": "string"
+     },
+     "source": {
+      "$ref": "#/components/schemas/PlanEnd"
+     },
+     "strength": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strength"
+     },
+     "target": {
+      "$ref": "#/components/schemas/PlanEnd"
+     }
+    },
+    "required": [
+     "source",
+     "target",
+     "rel_type",
+     "basis"
+    ],
+    "title": "PlanLink",
+    "type": "object"
+   },
+   "PlanSection": {
+    "properties": {
+     "compare": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Compare"
+     },
+     "complete": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Complete"
+     },
+     "existing": {
+      "title": "Existing",
+      "type": "integer"
+     },
+     "existing_edition": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Existing Edition"
+     },
+     "extracted": {
+      "title": "Extracted",
+      "type": "integer"
+     },
+     "key": {
+      "enum": [
+       "outcomes",
+       "assessments",
+       "topics"
+      ],
+      "title": "Key",
+      "type": "string"
+     },
+     "label": {
+      "title": "Label",
+      "type": "string"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "present",
+       "absent"
+      ],
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "key",
+     "label",
+     "status",
+     "reason",
+     "existing",
+     "extracted"
+    ],
+    "title": "PlanSection",
+    "type": "object"
+   },
+   "PlanSummary": {
+    "properties": {
+     "changes": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "title": "Changes",
+      "type": "object"
+     },
+     "closes": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Closes",
+      "type": "array"
+     },
+     "introduces": {
+      "items": {
+       "$ref": "#/components/schemas/MissingPiece"
+      },
+      "title": "Introduces",
+      "type": "array"
+     },
+     "missing_after": {
+      "title": "Missing After",
+      "type": "integer"
+     },
+     "missing_before": {
+      "title": "Missing Before",
+      "type": "integer"
+     },
+     "program_after": {
+      "title": "Program After",
+      "type": "integer"
+     },
+     "program_before": {
+      "title": "Program Before",
+      "type": "integer"
+     },
+     "program_closes": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Program Closes",
+      "type": "array"
+     },
+     "selected": {
+      "title": "Selected",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "selected",
+     "changes",
+     "missing_before",
+     "missing_after",
+     "closes",
+     "introduces",
+     "program_before",
+     "program_after",
+     "program_closes"
+    ],
+    "title": "PlanSummary",
     "type": "object"
    },
    "PloThread": {
@@ -1513,6 +3188,37 @@
      "new_base_version_id"
     ],
     "title": "RebaseIn",
+    "type": "object"
+   },
+   "RerunIn": {
+    "properties": {
+     "academic_year": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Academic Year"
+     },
+     "alias_codes": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Alias Codes"
+     }
+    },
+    "title": "RerunIn",
     "type": "object"
    },
    "ReviewDecisionIn": {
@@ -2021,6 +3727,36 @@
     "title": "Scorecard",
     "type": "object"
    },
+   "SelectionIn": {
+    "properties": {
+     "edits": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/LinkEdit"
+      },
+      "default": {},
+      "title": "Edits",
+      "type": "object"
+     },
+     "map_after": {
+      "default": false,
+      "title": "Map After",
+      "type": "boolean"
+     },
+     "selected_item_ids": {
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 2000,
+      "title": "Selected Item Ids",
+      "type": "array"
+     }
+    },
+    "required": [
+     "selected_item_ids"
+    ],
+    "title": "SelectionIn",
+    "type": "object"
+   },
    "SourceAssign": {
     "properties": {
      "applicability": {
@@ -2207,6 +3943,28 @@
       "default": false,
       "title": "Is Synthetic",
       "type": "boolean"
+     },
+     "mime_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mime Type"
+     },
+     "page_count": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Page Count"
      },
      "page_number": {
       "title": "Page Number",
@@ -2623,6 +4381,45 @@
     "title": "VersionOut",
     "type": "object"
    },
+   "VersionYear": {
+    "properties": {
+     "academic_year": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Academic Year"
+     },
+     "label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "start_year": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start Year"
+     }
+    },
+    "title": "VersionYear",
+    "type": "object"
+   },
    "WebColumn": {
     "properties": {
      "band": {
@@ -2712,6 +4509,22 @@
       ],
       "title": "Category",
       "type": "string"
+     },
+     "connection": {
+      "anyOf": [
+       {
+        "enum": [
+         "direct",
+         "strong",
+         "partial"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Connection"
      },
      "contradicted": {
       "default": false,
@@ -2973,6 +4786,20 @@
      "key": {
       "title": "Key",
       "type": "string"
+     },
+     "mapping": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "$ref": "#/components/schemas/NodeMapping"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mapping"
      },
      "metrics": {
       "additionalProperties": true,
@@ -5220,6 +7047,7 @@
   },
   "/api/v1/jobs": {
    "get": {
+    "description": "This organization's jobs, newest first: any of the given statuses and kinds; `mine` = started by the caller.",
     "operationId": "list_jobs_api_v1_jobs_get",
     "parameters": [
      {
@@ -5227,15 +7055,35 @@
       "name": "status",
       "required": false,
       "schema": {
-       "anyOf": [
-        {
-         "type": "string"
-        },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Status"
+       "default": [],
+       "items": {
+        "$ref": "#/components/schemas/JobStatus"
+       },
+       "title": "Status",
+       "type": "array"
+      }
+     },
+     {
+      "in": "query",
+      "name": "kind",
+      "required": false,
+      "schema": {
+       "default": [],
+       "items": {
+        "type": "string"
+       },
+       "title": "Kind",
+       "type": "array"
+      }
+     },
+     {
+      "in": "query",
+      "name": "mine",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Mine",
+       "type": "boolean"
       }
      },
      {
@@ -5901,6 +7749,517 @@
     "summary": "Critique",
     "tags": [
      "ai"
+    ]
+   }
+  },
+  "/api/v1/outline-imports/{import_id}": {
+   "get": {
+    "operationId": "get_outline_import_api_v1_outline_imports__import_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "import_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Import Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OutlineImportOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Get Outline Import",
+    "tags": [
+     "outlines"
+    ]
+   }
+  },
+  "/api/v1/outline-imports/{import_id}/apply": {
+   "post": {
+    "description": "Apply the selected plan items to the draft version in one transaction (If-Match: the plan's ETag).",
+    "operationId": "apply_outline_import_api_v1_outline_imports__import_id__apply_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "import_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Import Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "if-match",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "If-Match"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SelectionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OutlineImportOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Apply Outline Import",
+    "tags": [
+     "outlines"
+    ]
+   }
+  },
+  "/api/v1/outline-imports/{import_id}/discard": {
+   "post": {
+    "operationId": "discard_outline_import_api_v1_outline_imports__import_id__discard_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "import_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Import Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OutlineImportBrief"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Discard Outline Import",
+    "tags": [
+     "outlines"
+    ]
+   }
+  },
+  "/api/v1/outline-imports/{import_id}/preview": {
+   "post": {
+    "description": "Missing pieces a selection would close (and introduce), computed on a copy of the version.",
+    "operationId": "preview_outline_import_api_v1_outline_imports__import_id__preview_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "import_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Import Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SelectionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PlanSummary"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Preview Outline Import",
+    "tags": [
+     "outlines"
+    ]
+   }
+  },
+  "/api/v1/outline-imports/{import_id}/rerun": {
+   "post": {
+    "description": "Plan again against the current version (after a stale plan, or with a corrected academic year).",
+    "operationId": "rerun_outline_import_api_v1_outline_imports__import_id__rerun_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "import_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Import Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/RerunIn"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Body"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Rerun Outline Import Api V1 Outline Imports  Import Id  Rerun Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Rerun Outline Import",
+    "tags": [
+     "outlines"
+    ]
+   }
+  },
+  "/api/v1/outline-imports/{import_id}/revert": {
+   "post": {
+    "description": "Undo an applied import, if nothing it changed has been changed since (409 revert_conflict otherwise).",
+    "operationId": "revert_outline_import_api_v1_outline_imports__import_id__revert_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "import_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Import Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OutlineImportOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Revert Outline Import",
+    "tags": [
+     "outlines"
     ]
    }
   },
@@ -8778,6 +11137,198 @@
     ]
    }
   },
+  "/api/v1/versions/{version_id}/ai-map": {
+   "post": {
+    "description": "Map every outcome, assessment and topic (all courses, or the given ones): the synthesis model proposes each\nelement's connections with a level (direct / strong / partial), or reports that it found none. Proposals are\nwritten to this draft as dashed \"AI?\" links; nothing becomes documented. Sends element texts to the provider.",
+    "operationId": "ai_map_api_v1_versions__version_id__ai_map_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/MapRequest"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Body"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Ai Map",
+    "tags": [
+     "alignment"
+    ]
+   }
+  },
+  "/api/v1/versions/{version_id}/ai-map/preview": {
+   "get": {
+    "description": "How many model calls mapping would take and what it would roughly cost (nothing is sent).",
+    "operationId": "ai_map_preview_api_v1_versions__version_id__ai_map_preview_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "course_id",
+      "required": false,
+      "schema": {
+       "default": [],
+       "items": {
+        "type": "string"
+       },
+       "title": "Course Id",
+       "type": "array"
+      }
+     },
+     {
+      "in": "query",
+      "name": "forward",
+      "required": false,
+      "schema": {
+       "default": true,
+       "title": "Forward",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Ai Map Preview Api V1 Versions  Version Id  Ai Map Preview Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Ai Map Preview",
+    "tags": [
+     "alignment"
+    ]
+   }
+  },
   "/api/v1/versions/{version_id}/ai-mappings": {
    "post": {
     "operationId": "ai_mappings_api_v1_versions__version_id__ai_mappings_post",
@@ -8925,6 +11476,274 @@
     "summary": "Get Assessment Alignment",
     "tags": [
      "analysis"
+    ]
+   }
+  },
+  "/api/v1/versions/{version_id}/courses/{course_id}/missing": {
+   "get": {
+    "description": "What the program is missing for one course: content, unknowns, and alignment gaps of its elements.",
+    "operationId": "get_course_missing_api_v1_versions__version_id__courses__course_id__missing_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "course_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Course Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CourseMissingOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Get Course Missing",
+    "tags": [
+     "outlines"
+    ]
+   }
+  },
+  "/api/v1/versions/{version_id}/courses/{course_id}/outline-imports": {
+   "get": {
+    "operationId": "list_outline_imports_api_v1_versions__version_id__courses__course_id__outline_imports_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "course_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Course Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/OutlineImportBrief"
+         },
+         "title": "Response List Outline Imports Api V1 Versions  Version Id  Courses  Course Id  Outline Imports Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "List Outline Imports",
+    "tags": [
+     "outlines"
+    ]
+   },
+   "post": {
+    "description": "Import a course outline for this course: a PDF, DOCX or text file, pasted text, or a document already\nuploaded. The job reads it, extracts its outcomes, assessments and topics (route `extract`), and asks the\nreconcile agent (route `synthesize`) what the program needs from it. The outline text and this course's\nelements are sent to those routes' providers. Nothing changes until a plan is applied.",
+    "operationId": "create_outline_import_api_v1_versions__version_id__courses__course_id__outline_imports_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "version_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Version Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "course_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Course Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-cfs-user",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Cfs-User"
+      }
+     },
+     {
+      "in": "header",
+      "name": "authorization",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_create_outline_import_api_v1_versions__version_id__courses__course_id__outline_imports_post"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OutlineImportCreated"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Create Outline Import",
+    "tags": [
+     "outlines"
     ]
    }
   },

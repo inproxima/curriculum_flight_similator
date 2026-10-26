@@ -74,6 +74,25 @@ export const THREAD_TEXT: Record<string, string> = {
   levels_unstated: "Contributions state no level",
 };
 
+/** How direct a connection is (server: analysis.alignment.connection_level). Colour plus a glyph, never colour alone. */
+export type ConnectionLevel = "direct" | "strong" | "partial";
+export const CONNECTION_LEVELS: ConnectionLevel[] = ["direct", "strong", "partial"];
+export const CONNECTION_COLOR: Record<ConnectionLevel, string> = { direct: "#1b7a3d", strong: "#2463a7", partial: "#9a5b00" };
+export const NONE_COLOR = "#b42318"; // the AI examined the element and found no connection
+export const UNMAPPED_COLOR = "#6b7385"; // not examined yet
+export const CONNECTION_GLYPH: Record<ConnectionLevel, string> = { direct: "●●●", strong: "●●○", partial: "●○○" };
+export const CONNECTION_TEXT: Record<ConnectionLevel, string> = {
+  direct: "Direct",
+  strong: "Strong",
+  partial: "Partial / surmised",
+};
+export const CONNECTION_HELP: Record<ConnectionLevel, string> = {
+  direct: "Stated in a source, or the source element explicitly addresses the target",
+  strong: "Clearly implied",
+  partial: "Plausible but indirect, or only part of the target (a surmise)",
+};
+export type ColorBy = "connection" | "type";
+
 export interface EdgeLook {
   stroke: string;
   width: number;
@@ -83,14 +102,17 @@ export interface EdgeLook {
   title: string;
 }
 
-export function edgeLook(e: WebEdge, opts: { diff?: boolean; dim?: boolean; hl?: boolean } = {}): EdgeLook {
+export function edgeLook(e: WebEdge, opts: { diff?: boolean; dim?: boolean; hl?: boolean; colorBy?: ColorBy } = {}): EdgeLook {
   const label = e.strength?.label ?? null;
-  let stroke = TYPE_COLOR[e.type] ?? "#8a96a8";
+  const conn = e.connection as ConnectionLevel | null | undefined;
+  const byLevel = (opts.colorBy ?? "connection") === "connection" && !!conn;
+  let stroke = byLevel ? CONNECTION_COLOR[conn!] : TYPE_COLOR[e.type] ?? "#8a96a8";
   let width = label ? STRENGTH_WIDTH[label] : e.category === "containment" ? 1 : 1.6;
   let dash = PROVENANCE_DASH[e.provenance];
   if (e.category === "containment") dash = "2 3";
   const parts: string[] = [];
-  if (label) parts.push(STRENGTH_SHORT[label]);
+  if (byLevel) parts.push(CONNECTION_GLYPH[conn!]);
+  else if (label) parts.push(STRENGTH_SHORT[label]);
   if (e.provenance === "proposed") parts.push("AI?");
   if (e.bundle) parts.push(`×${e.bundle.count}`);
   let opacity = 1;
@@ -106,7 +128,8 @@ export function edgeLook(e: WebEdge, opts: { diff?: boolean; dim?: boolean; hl?:
   if (opts.hl) width += 1.4;
   const title = [
     e.type.replace(/_/g, " "),
-    label ? `${STRENGTH_TEXT[label]} (${e.strength?.effective?.toFixed(2)})` : null,
+    conn ? `${CONNECTION_TEXT[conn]} connection` : null,
+    label ? `strength ${STRENGTH_TEXT[label]} (${e.strength?.effective?.toFixed(2)})` : null,
     PROVENANCE_TEXT[e.provenance],
     e.status !== "unchanged" ? STATUS_TEXT[e.status] : null,
   ]

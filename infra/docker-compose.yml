@@ -1,4 +1,4 @@
-name: cfs
+name: curriculum-flight-simulator
 services:
   db:
     image: pgvector/pgvector:pg16

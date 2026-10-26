@@ -65,6 +65,29 @@ LEVEL_INTENSITY = {"assess": 1.0, "reinforce": 0.8, "introduce": 0.6}
 STAGES = ("introduce", "reinforce", "assess")
 
 
+# How directly a link connects two elements, shown by colour on every view (with a glyph, never colour alone).
+#   direct   the documents state it (explicit + accepted), or the AI judged the source to address the target directly
+#   strong   clearly implied
+#   partial  plausible, indirect or only part of the target: a surmise
+# The AI's categorical judgment is stored as an asserted strength so it stays inspectable and editable.
+CONNECTION_LEVELS = ("direct", "strong", "partial")
+LEVEL_STRENGTH = {"direct": 0.95, "strong": 0.8, "partial": 0.5}
+
+
+def connection_level(r: dict[str, Any], strength: dict[str, Any] | None = None) -> str | None:
+    """direct | strong | partial for an active alignment link; None for structure or inactive links."""
+    if r["type"] not in ALIGNMENT_LINKS or not _active(r):
+        return None
+    if r["basis"] == "explicit_statement" and r["review_state"] == "accepted":
+        return "direct"
+    a = r.get("strength")
+    if a is not None:
+        a = float(a)
+        return "direct" if a >= 0.9 else "strong" if a >= 0.7 else "partial"
+    label = (strength or {}).get("label")
+    return "strong" if label == "strong" else "partial"
+
+
 def pair_allowed(snap: Snapshot, rel_type: str, source: str, target: str) -> bool:
     s, t = snap.entities.get(source), snap.entities.get(target)
     return bool(s and t and (s["type"], t["type"]) in TYPE_PAIRS.get(rel_type, set()))

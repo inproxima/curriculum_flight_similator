@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 /** Alignment Web home, change → simulate, and the four simulation views. SYNTHETIC fixture only. */
 
@@ -14,6 +15,7 @@ async function selectSynthetic(page: Page) {
   const v1 = await version.locator("option", { hasText: "2024–25 (synthetic) · published" }).getAttribute("value");
   await version.selectOption(v1!);
   await expect(page.getByRole("group", { name: "Alignment scorecard" })).toBeVisible();
+  await page.getByRole("button", { name: "Columns", exact: true }).click(); // these tests cover the column layout
 }
 
 async function pick(page: Page, query: string, option: RegExp) {

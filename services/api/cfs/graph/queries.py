@@ -23,7 +23,7 @@ from cfs.curriculum.rules import (
     parse_expr,
     render,
 )
-from cfs.graph.snapshot import Snapshot, time_index
+from cfs.graph.snapshot import TERM_ORDER, Snapshot, time_index
 
 EXPOSURE_FOR_CLASS = {
     "required": "required_path",
@@ -53,6 +53,45 @@ def timing(snap: Snapshot, earlier: str, later: str) -> str:
     if a is None or b is None:
         return "unknown"
     return "earlier" if a < b else "same_term" if a == b else "later"
+
+
+def course_time(snap: Snapshot, course_id: str) -> tuple[int | None, int | None]:
+    pl = snap.primary_placement(course_id) or {}
+    return pl.get("year"), TERM_ORDER.get(pl.get("term") or "unknown")
+
+
+def later_courses(snap: Snapshot, course_id: str) -> list[str]:
+    """Courses that come after this one: a higher year, a later known term in the same year, or a course whose
+    documented prerequisite names this one. Prerequisite dependents first, then by year and code."""
+    y, t = course_time(snap, course_id)
+    dependents = {r["target"] for r in snap.rels("formal_prerequisite", source=course_id)}
+    out = []
+    for c in snap.courses():
+        cid = c["id"]
+        if cid == course_id:
+            continue
+        cy, ct = course_time(snap, cid)
+        later = (
+            y is not None and cy is not None and (cy > y or (cy == y and t is not None and ct is not None and ct > t))
+        )
+        if later or cid in dependents:
+            out.append(cid)
+    return sorted(out, key=lambda c: (c not in dependents, course_time(snap, c)[0] or 99, snap.entities[c]["key"]))
+
+
+def earlier_courses(snap: Snapshot, course_id: str, later: dict[str, list[str]] | None = None) -> list[str]:
+    """The inverse of later_courses: documented prerequisites first, then the nearest year."""
+    later = later if later is not None else {c["id"]: later_courses(snap, c["id"]) for c in snap.courses()}
+    prereqs = {r["source"] for r in snap.rels("formal_prerequisite", target=course_id)}
+    out = [c for c, ls in later.items() if course_id in ls]
+    return sorted(out, key=lambda c: (c not in prereqs, -(course_time(snap, c)[0] or 0), snap.entities[c]["key"]))
+
+
+def teaches(snap: Snapshot, course_id: str) -> bool:
+    """The course has an outcome or a topic: something a later course could build on."""
+    return any(
+        _active(r) and r["target"] in snap.entities for r in snap.rels("has_outcome", "covers_topic", source=course_id)
+    )
 
 
 def owner_courses(snap: Snapshot, node_id: str) -> list[str]:

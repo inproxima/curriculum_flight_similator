@@ -26,15 +26,19 @@ from cfs.curriculum.service import (
     get_or_create_entity,
     place_course,
     revise_course_field,
+    revise_member,
     revise_relationship,
     set_membership,
 )
+from cfs.ingest.text import normalize
 from cfs.models import (
     CoursePlacement,
     CurriculumEntityMembership,
     CurriculumRelationshipMembership,
+    CurriculumVersion,
     DocumentVersion,
     Entity,
+    EntityRevision,
     RelationshipEvidence,
     RelationshipRevision,
     RequirementRule,
@@ -81,6 +85,29 @@ def _uuid(v: Any) -> uuid.UUID | None:
     return uuid.UUID(str(v)) if v else None
 
 
+def _key_taken(db: Session, cv: uuid.UUID, etype: EntityType, payload: dict) -> dict[str, Any] | None:
+    """Keys from extraction are positional ("CO3" = third in that document), so the key of a candidate can already
+    belong to a different element of this version (for example one an outline import added). Same wording: nothing
+    to do. Different wording: refuse, rather than silently rewording that element and duplicating its links."""
+    existing = _member_entity(db, cv, etype, payload["key"])
+    if existing is None:
+        return None
+    m = db.scalar(
+        select(CurriculumEntityMembership).where(
+            CurriculumEntityMembership.curriculum_version_id == cv, CurriculumEntityMembership.entity_id == existing.id
+        )
+    )
+    rev = db.get(EntityRevision, m.entity_revision_id)
+    text = payload.get("statement") or payload.get("title") or ""
+    if normalize(rev.title).lower().strip(" .") == normalize(text).lower().strip(" ."):
+        return {"entity_id": str(existing.id), "already_present": True}
+    raise Conflict(
+        f"{payload['key']} already exists in this version with different wording (“{rev.title[:120]}”). Edit the "
+        "item to give it another key, or use the course's outline import to decide which wording applies.",
+        code="key_taken",
+    )
+
+
 def decide(
     db: Session,
     p: Principal,
@@ -92,6 +119,15 @@ def decide(
     choice: str | None = None,
 ) -> dict[str, Any]:
     p.require(Role.reviewer)
+    # Lock order: version row, then the item (as outline imports do), and re-read the item under the lock so a
+    # decision can't act on an item that was decided meanwhile.
+    if item.curriculum_version_id is not None:
+        db.scalar(
+            select(CurriculumVersion.id).where(CurriculumVersion.id == item.curriculum_version_id).with_for_update()
+        )
+    item = db.scalar(
+        select(ReviewItem).where(ReviewItem.id == item.id).with_for_update().execution_options(populate_existing=True)
+    )
     if item.status not in (ReviewItemStatus.open, ReviewItemStatus.deferred):
         raise Conflict(f"Review item already {item.status.value}")
     applied: dict[str, Any] = {}
@@ -101,7 +137,7 @@ def decide(
         item.status = ReviewItemStatus.deferred
     elif decision == "reject":
         if item.kind == ReviewItemKind.inferred_mapping and item.subject_relationship_revision_id:
-            assert_draft(db, item.curriculum_version_id)
+            assert_draft(db, item.curriculum_version_id, lock=True)
             rel = _current_for_item(db, item)
             new = revise_relationship(
                 db, item.curriculum_version_id, rel, review_state=ReviewState.rejected, created_by=p.user_id
@@ -148,7 +184,7 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
         return {"document_version_id": str(dv.id), "academic_year": dv.academic_year}
 
     cv = item.curriculum_version_id
-    assert_draft(db, cv)
+    assert_draft(db, cv, lock=True)
     org = p.org_id
 
     if kind == ReviewItemKind.inferred_mapping and payload.get("proposal"):
@@ -219,6 +255,8 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
         course = _member_entity(db, cv, EntityType.course, payload["course"])
         if course is None:
             raise Conflict(f"Course {payload['course']} is not in this curriculum version; accept it first.")
+        if (taken := _key_taken(db, cv, EntityType(et), payload)) is not None:
+            return taken
         ev = [(span, EvidenceStance.supporting)] if span else []
         if et == "course_outcome":
             e = get_or_create_entity(db, org, EntityType.course_outcome, payload["key"])
@@ -392,11 +430,36 @@ def _materialize(db: Session, p: Principal, item: ReviewItem, payload: dict, cho
                 Term(value) if field == "term" else PlacementClass(value) if field == "classification" else int(value),
             )
             return {"kept": "proposed", "placement_id": str(pl.id), field: value}
+        span = item.evidence_span_ids[0] if item.evidence_span_ids else None
         if field in ("title", "credits", "description") and ent.entity_type == EntityType.course:
-            span = item.evidence_span_ids[0] if item.evidence_span_ids else None
             rev = revise_course_field(db, cv, ent, field, value, span, created_by=p.user_id)
             return {"kept": "proposed", "revision_id": str(rev.id), field: value}
-        raise AppError(f"Field '{field}' changes must be made through a new entity revision (not yet supported here)")
+        ev = [(field, span)] if span else []
+        if field == "statement" and ent.entity_type == EntityType.course_outcome:
+            _, rev = revise_member(
+                db,
+                cv,
+                ent,
+                title=value,
+                details={"statement_verbatim": value, "normalized_label": str(value)[:300]},
+                drop_evidence_fields=("statement",),
+                add_evidence=ev,
+                created_by=p.user_id,
+            )
+            return {"kept": "proposed", "revision_id": str(rev.id), field: value}
+        assessment_fields = ("format", "weight_percent", "timing_week", "timing_text")
+        if field in assessment_fields and ent.entity_type == EntityType.assessment:
+            _, rev = revise_member(
+                db,
+                cv,
+                ent,
+                details={field: value},
+                drop_evidence_fields=(field,),
+                add_evidence=ev,
+                created_by=p.user_id,
+            )
+            return {"kept": "proposed", "revision_id": str(rev.id), field: value}
+        raise AppError(f"Field '{field}' of a {ent.entity_type.value} can't be changed through a review decision")
     raise AppError(f"No materialization for {kind.value}")
 
 
@@ -645,7 +708,7 @@ def decide_relationship(
     from cfs.core.errors import NotFound
 
     p.require(Role.reviewer)
-    assert_draft(db, cv)
+    assert_draft(db, cv, lock=True)
     cur = current_revision(db, cv, key)
     if cur is None:
         raise NotFound("Relationship is not part of this curriculum version")

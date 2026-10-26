@@ -1,7 +1,16 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { memo } from "react";
 import type { WebGap, WebNode } from "../api/webHooks";
-import { STATUS_GLYPH, STATUS_TEXT, STRENGTH_TEXT, THREAD_TEXT } from "./webStyle";
+import {
+  CONNECTION_COLOR,
+  CONNECTION_GLYPH,
+  CONNECTION_TEXT,
+  STATUS_GLYPH,
+  STATUS_TEXT,
+  STRENGTH_TEXT,
+  THREAD_TEXT,
+  type ConnectionLevel,
+} from "./webStyle";
 
 export type WebNodeData = {
   node: WebNode;
@@ -68,6 +77,74 @@ function cls(d: WebNodeData, base: string) {
     d.compact ? "compact" : "",
   ].join(" ");
 }
+
+/** Which link each element type is examined for, and how its states read on the node. */
+const MAP_FOR: Record<string, { kind: string; none: string; linked: string; gap: string }> = {
+  course_outcome: { kind: "contributes_to", none: "no program outcome", linked: "program outcome", gap: "clo_no_plo" },
+  assessment: { kind: "assesses", none: "tests no outcome", linked: "tests an outcome", gap: "assessment_no_clo" },
+  topic: { kind: "supports", none: "supports no outcome", linked: "supports an outcome", gap: "topic_no_clo" },
+};
+const MAPPED_GAPS = new Set(Object.values(MAP_FOR).map((m) => m.gap));
+
+type Mapping = Record<string, { best?: ConnectionLevel | null; count?: number; verdict?: string | null; reason?: string | null }>;
+
+/** The element's own connection state: best level found (colour + dots), "✗ none found" (the AI looked and found
+ *  nothing), or "? not mapped" (not examined yet). */
+export function MapFlag({ node }: { node: WebNode }) {
+  const cfg = MAP_FOR[node.type];
+  const m = (node.mapping as Mapping | null | undefined)?.[cfg?.kind ?? ""];
+  if (!cfg) return null;
+  if (m?.best) {
+    const c = CONNECTION_COLOR[m.best];
+    return (
+      <span className="map-chip" style={{ color: c, borderColor: c }} title={`${CONNECTION_TEXT[m.best]} connection to ${cfg.linked} (${m.count} link(s))`}>
+        {CONNECTION_GLYPH[m.best]} {CONNECTION_TEXT[m.best].split(" ")[0]}
+      </span>
+    );
+  }
+  if (m?.verdict === "none")
+    return (
+      <span className="map-chip none" title={`The AI found no connection: ${m.reason ?? ""}`}>
+        ✗ {cfg.none}
+      </span>
+    );
+  return (
+    <span className="map-chip unmapped" title="Not examined by the AI mapping yet">
+      ? not mapped
+    </span>
+  );
+}
+
+const HORIZONTAL = {
+  prepared_by: { arrow: "←", linked: "Builds on earlier / prerequisite courses", none: "The AI found nothing earlier that prepares for it" },
+  prepares_for: { arrow: "→", linked: "Prepares for later courses", none: "The AI found nothing later that builds on it" },
+} as const;
+
+/** Horizontal: whether a topic or outcome builds on an earlier (prerequisite) course (←), and whether something in a
+ *  later course builds on it (→). Nothing is shown until it has been examined. */
+export function HorizontalFlag({ node, kind }: { node: WebNode; kind: keyof typeof HORIZONTAL }) {
+  const m = (node.mapping as Mapping | null | undefined)?.[kind];
+  const h = HORIZONTAL[kind];
+  if (!m) return null;
+  if (m.best) {
+    const c = CONNECTION_COLOR[m.best];
+    return (
+      <span className="map-chip" style={{ color: c, borderColor: c }} title={`${h.linked} (${m.count} link(s)); strongest: ${CONNECTION_TEXT[m.best]}`}>
+        {h.arrow} {CONNECTION_GLYPH[m.best]}
+      </span>
+    );
+  }
+  if (m.verdict === "none")
+    return (
+      <span className="map-chip unmapped" title={`${h.none}: ${m.reason ?? ""}`}>
+        {h.arrow} none
+      </span>
+    );
+  return null;
+}
+
+/** Gaps the map flag already shows are not repeated. */
+const otherGaps = (n: WebNode, gaps: WebGap[]) => (n.mapping ? gaps.filter((g) => !MAPPED_GAPS.has(g.kind)) : gaps);
 
 const GapFlag = ({ gaps }: { gaps: WebGap[] }) =>
   gaps.length ? (
@@ -161,9 +238,12 @@ export const CloNode = memo(function CloNode({ data }: NodeProps<WebFlowNode>) {
       </div>
       {!data.compact && <div className="stmt">{n.title}</div>}
       <div className="meta">
+        <MapFlag node={n} />
+        <HorizontalFlag node={n} kind="prepared_by" />
+        <HorizontalFlag node={n} kind="prepares_for" />
         <StrengthBadge label={m.label} score={m.score} />
         <StatusBadge status={n.status} diff={data.diff} />
-        <GapFlag gaps={data.gaps.filter((g) => g.kind !== "clo_unassessed")} />
+        <GapFlag gaps={otherGaps(n, data.gaps).filter((g) => g.kind !== "clo_unassessed")} />
       </div>
     </div>
   );
@@ -201,9 +281,10 @@ export const AssessmentNode = memo(function AssessmentNode({ data }: NodeProps<W
           {d.format ?? "format ?"} · {d.weight_percent != null ? `${d.weight_percent}%` : "weight ?"} · {d.timing_week ? `wk ${d.timing_week}` : "wk ?"}
           {d.documented_hours ? ` · ${d.documented_hours}h` : ""}
         </span>
+        <MapFlag node={n} />
         {!data.compact && <StrengthBadge label={m.label} score={m.score} />}
         <StatusBadge status={n.status} diff={data.diff} />
-        <GapFlag gaps={data.gaps} />
+        <GapFlag gaps={otherGaps(n, data.gaps)} />
       </div>
     </div>
   );
@@ -215,8 +296,15 @@ export const TopicNode = memo(function TopicNode({ data }: NodeProps<WebFlowNode
     <div className={cls(data, "topic")} style={{ width: data.width }} aria-label={`Topic ${n.title}`}>
       <Handles />
       <span className="muted small">Topic</span> <span className="title">{n.title}</span>
+      {!data.compact && (
+        <span className="topic-flags">
+          <MapFlag node={n} />
+          <HorizontalFlag node={n} kind="prepared_by" />
+          <HorizontalFlag node={n} kind="prepares_for" />
+        </span>
+      )}
       <StatusBadge status={n.status} diff={data.diff} />
-      <GapFlag gaps={data.gaps} />
+      <GapFlag gaps={otherGaps(n, data.gaps)} />
     </div>
   );
 });

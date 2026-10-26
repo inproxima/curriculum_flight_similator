@@ -20,6 +20,8 @@ Status: all six phases are implemented and tested locally:
 5. AI assistance
 6. Security, accessibility, CI, and AWS infrastructure definitions
 
+A public prototype (no sign-in) is hosted on Render; see [docs/hosting-render.md](docs/hosting-render.md).
+
 The AWS infrastructure is validated but has **not been applied**; nothing runs in AWS yet. See
 [docs/implementation-report.md](docs/implementation-report.md), [docs/deployment.md](docs/deployment.md),
 [docs/operations.md](docs/operations.md), and [docs/evaluation.md](docs/evaluation.md).
@@ -63,8 +65,19 @@ Set `CFS_TASK_ALWAYS_EAGER=true` to run jobs inline without a worker.
    exploratory). Nothing is merged implicitly.
 3. **Review inbox**: accept, edit, reject, or defer new courses, requisites, outcomes, conflicts (both sides kept),
    inferred mappings, duplicates, and missing metadata. Accepting changes draft versions only.
-4. **Web** (home): the whole program as one connected web. Program outcomes sit on top. Each course is a column
-   (ordered by year and term) holding its learning outcomes, assessments and assignments, and topics.
+4. **Web** (home): the whole program as one connected web. It opens as a **Network**
+   ([ADR 0006](docs/adr/0006-network-view.md)), a force-directed map drawn on a canvas.
+   - **Layout:** program outcomes sit in a row across the top, and each course is a cluster of its outcomes (●),
+     assessments (■) and topics (⬢), placed left to right by year. **Clusters** lets related courses gather
+     instead.
+   - **Links** are faint and coloured by connection level. They fade further the more are shown.
+   - **Hover** an element to preview what it connects to. **Click** it to light that up (moving dots show
+     direction) and open it in the Inspector. Scroll to zoom and drag to move.
+   - **Show** picks one family of links: *Outcomes → program outcomes*, *Assessments → outcomes*, *Topics →
+     outcomes*, *Earlier ↔ later* or *Everything*. The rest fades; tick *Hide the rest* to remove it.
+     *Only the selection* isolates what the selected element connects to.
+   - **Columns** switches to the classic layout, in which each course is a column (ordered by year and term)
+     holding its learning outcomes, assessments and assignments, and topics.
    - **Links:**
      - *Vertical*: topic → outcome, assessment → outcome, outcome → program outcome.
      - *Horizontal*: an outcome or assessment → a later course's outcome.
@@ -80,6 +93,43 @@ Set `CFS_TASK_ALWAYS_EAGER=true` to run jobs inline without a worker.
      scenario changed".
    - **Propose missing links (AI)** (draft versions) adds dashed proposals. Accept, edit, or reject them inline
      or from the proposed-links queue.
+   - **Connection map** ([ADR 0005](docs/adr/0005-connection-map.md)): links are coloured by how direct they are.
+     - The levels are green ●●● **direct** (stated, or directly addresses the target), blue ●●○ **strong**
+       (clearly implied) and amber ●○○ **partial / surmised**.
+     - **Map connections (AI)** (Layers, draft versions) has the AI examine every course outcome, assessment and
+       topic of the selected course, or of the whole program. The cost is shown first.
+       - Each course outcome is checked against the program outcomes.
+       - Each assessment and topic is checked against the course's outcomes.
+       - Each topic and outcome is checked horizontally: what it builds on in earlier (prerequisite) courses and
+         what later courses build on it.
+     - Every element then shows its best level, a red **✗ none found** with the AI's reason, or **? not mapped**.
+     - Mapping runs in the background (a whole program takes about 20 minutes).
+       - A card at the bottom right shows its progress on every page, and so does the tab title.
+       - **Stop** ends it early; links already proposed are kept.
+       - When it ends, the card becomes a notification with the result, actual cost and **Open Connections**. It
+         stays until dismissed, even after a reload.
+       - Allow **Notify me** to also get a system notification when the tab is in the background.
+     - The **Connections** page shows the same as heat maps (outcome × program outcome; per course, assessment ×
+       outcome and topic × outcome) and an across-courses matrix. Click any cell to review its links.
+   - **Missing pieces** (course inspector) lists what the program lacks for the course:
+     - content: outcomes, assessments, topics, description, credits;
+     - unknowns: year, term, prerequisites;
+     - its elements' alignment gaps.
+   - **Import course outline…** (draft versions, [ADR 0004](docs/adr/0004-course-outline-import.md)) fills those
+     pieces from the course's outline:
+     - Upload a PDF, DOCX or text file, paste text, or pick a document that is already uploaded.
+     - The outline is read and its content is extracted and quote-verified.
+     - An agent compares it with the draft and proposes a plan, shown per item with its evidence and a reason:
+       - updates to reworded outcomes and changed assessments;
+       - new outcomes, assessments and topics;
+       - retirements;
+       - links stated in the outline, which are recorded as documented;
+       - links it infers, which are recorded as AI interpretations.
+     - **Newer replaces older:** when the outline's academic year matches the draft and is newer than the source of
+       the current content, updates and retirements are pre-selected. An older outline can only fill empty sections.
+     - **Apply** writes your selection in one step (the published version is untouched). **Revert** undoes it
+       exactly. By default Apply then maps the course's connections with the AI (untick *Then map this course's
+       connections* to skip it).
 5. **Change → Simulate**:
    - Ask *"What would you like to change?"* in the bar under the web. The assistant drafts changes you apply
      with one click.
@@ -94,6 +144,7 @@ Set `CFS_TASK_ALWAYS_EAGER=true` to run jobs inline without a worker.
    the source page, and use the **Expected preparation** and **Future use** tabs.
    **Assistant** (top bar): Explore, Investigate, or Simulate. Answers cite verified source passages.
 7. **Outcomes**: course × program-outcome matrix with a defined denominator, assessment alignment, potential issues.
+   **Connections**: the connection map as heat maps, coloured by level, with "none found" and "not mapped" rows.
    **Scenarios**: list, undo/redo, run the deterministic analysis, compare, rebase, export, or publish as a new
    version (editor role).
 8. **Table**: keyboard-accessible alternative to the map, plus documented option rules.
@@ -120,6 +171,8 @@ documents to the provider shown for its route (see **AI & usage**).
 - **What AI does here:**
   - Proposes extraction candidates and outcome alignments. These are quote-verified and always go to the review
     inbox.
+  - Reconciles a course outline with a course (route `synthesize`). Code verifies every decision, and nothing
+    changes until you apply the plan.
   - Answers questions with verified citations.
   - Drafts scenario changes, which you apply explicitly.
   - Critiques proposals and explains deterministic analyses.

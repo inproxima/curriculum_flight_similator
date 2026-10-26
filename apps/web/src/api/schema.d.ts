@@ -415,7 +415,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Jobs */
+        /**
+         * List Jobs
+         * @description This organization's jobs, newest first: any of the given statuses and kinds; `mine` = started by the caller.
+         */
         get: operations["list_jobs_api_v1_jobs_get"];
         put?: never;
         post?: never;
@@ -561,6 +564,120 @@ export interface paths {
         put?: never;
         /** Critique */
         post: operations["critique_api_v1_messages__mid__critique_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outline-imports/{import_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Outline Import */
+        get: operations["get_outline_import_api_v1_outline_imports__import_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outline-imports/{import_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Outline Import
+         * @description Apply the selected plan items to the draft version in one transaction (If-Match: the plan's ETag).
+         */
+        post: operations["apply_outline_import_api_v1_outline_imports__import_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outline-imports/{import_id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard Outline Import */
+        post: operations["discard_outline_import_api_v1_outline_imports__import_id__discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outline-imports/{import_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Outline Import
+         * @description Missing pieces a selection would close (and introduce), computed on a copy of the version.
+         */
+        post: operations["preview_outline_import_api_v1_outline_imports__import_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outline-imports/{import_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rerun Outline Import
+         * @description Plan again against the current version (after a stale plan, or with a corrected academic year).
+         */
+        post: operations["rerun_outline_import_api_v1_outline_imports__import_id__rerun_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/outline-imports/{import_id}/revert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revert Outline Import
+         * @description Undo an applied import, if nothing it changed has been changed since (409 revert_conflict otherwise).
+         */
+        post: operations["revert_outline_import_api_v1_outline_imports__import_id__revert_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1049,6 +1166,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/versions/{version_id}/ai-map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Map
+         * @description Map every outcome, assessment and topic (all courses, or the given ones): the synthesis model proposes each
+         *     element's connections with a level (direct / strong / partial), or reports that it found none. Proposals are
+         *     written to this draft as dashed "AI?" links; nothing becomes documented. Sends element texts to the provider.
+         */
+        post: operations["ai_map_api_v1_versions__version_id__ai_map_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/versions/{version_id}/ai-map/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ai Map Preview
+         * @description How many model calls mapping would take and what it would roughly cost (nothing is sent).
+         */
+        get: operations["ai_map_preview_api_v1_versions__version_id__ai_map_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/versions/{version_id}/ai-mappings": {
         parameters: {
             query?: never;
@@ -1077,6 +1236,50 @@ export interface paths {
         get: operations["get_assessment_alignment_api_v1_versions__version_id__assessment_alignment_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/versions/{version_id}/courses/{course_id}/missing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Course Missing
+         * @description What the program is missing for one course: content, unknowns, and alignment gaps of its elements.
+         */
+        get: operations["get_course_missing_api_v1_versions__version_id__courses__course_id__missing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/versions/{version_id}/courses/{course_id}/outline-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Outline Imports */
+        get: operations["list_outline_imports_api_v1_versions__version_id__courses__course_id__outline_imports_get"];
+        put?: never;
+        /**
+         * Create Outline Import
+         * @description Import a course outline for this course: a PDF, DOCX or text file, pasted text, or a document already
+         *     uploaded. The job reads it, extracts its outcomes, assessments and topics (route `extract`), and asks the
+         *     reconcile agent (route `synthesize`) what the program needs from it. The outline text and this course's
+         *     elements are sent to those routes' providers. Nothing changes until a plan is applied.
+         */
+        post: operations["create_outline_import_api_v1_versions__version_id__courses__course_id__outline_imports_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1366,6 +1569,23 @@ export interface components {
              */
             max_calls: number;
         };
+        /** Body_create_outline_import_api_v1_versions__version_id__courses__course_id__outline_imports_post */
+        Body_create_outline_import_api_v1_versions__version_id__courses__course_id__outline_imports_post: {
+            /** Academic Year */
+            academic_year?: string | null;
+            /** Alias Codes */
+            alias_codes?: string | null;
+            /** Document Version Id */
+            document_version_id?: string | null;
+            /** File */
+            file?: string | null;
+            /** Pasted Text */
+            pasted_text?: string | null;
+            /** Publication Date */
+            publication_date?: string | null;
+            /** Title */
+            title?: string | null;
+        };
         /** Body_upload_document_api_v1_documents_post */
         Body_upload_document_api_v1_documents_post: {
             /** Academic Year */
@@ -1422,6 +1642,25 @@ export interface components {
             scenario_id?: string | null;
             /** Title */
             title?: string | null;
+        };
+        /** CourseMissingOut */
+        CourseMissingOut: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Course Id */
+            course_id: string;
+            /** Course Key */
+            course_key: string;
+            /** Fillable */
+            fillable: number;
+            /** Items */
+            items: components["schemas"]["MissingPiece"][];
+            /** Program */
+            program: components["schemas"]["MissingPiece"][];
+            /** Total */
+            total: number;
         };
         /** CoursePair */
         CoursePair: {
@@ -1626,6 +1865,8 @@ export interface components {
             id: string;
             /** Kind */
             kind: string;
+            /** Last Message */
+            last_message?: string | null;
             /** Payload */
             payload: {
                 [key: string]: unknown;
@@ -1644,6 +1885,11 @@ export interface components {
              */
             updated_at: string;
         };
+        /**
+         * JobStatus
+         * @enum {string}
+         */
+        JobStatus: "queued" | "running" | "succeeded" | "partial" | "failed" | "cancelled";
         /** LinkDecisionIn */
         LinkDecisionIn: {
             /**
@@ -1673,6 +1919,25 @@ export interface components {
             /** Strength Source */
             strength_source: string | null;
         };
+        /** LinkEdit */
+        LinkEdit: {
+            /** Level */
+            level?: ("introduce" | "reinforce" | "assess" | "") | null;
+            /** Strength */
+            strength?: number | null;
+        };
+        /** MapRequest */
+        MapRequest: {
+            /** Course Ids */
+            course_ids?: string[] | null;
+            /**
+             * Forward
+             * @default true
+             */
+            forward: boolean;
+            /** Max Cost Usd */
+            max_cost_usd?: number | null;
+        };
         /** MessageIn */
         MessageIn: {
             /**
@@ -1683,6 +1948,264 @@ export interface components {
             mode: "explore" | "investigate" | "simulate";
             /** Text */
             text: string;
+        };
+        /** MissingPiece */
+        MissingPiece: {
+            /** Entity Ids */
+            entity_ids: string[];
+            /** Fillable */
+            fillable: boolean;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Message */
+            message: string;
+            /** Severity */
+            severity: string;
+            /** Source */
+            source?: string | null;
+            /** Target */
+            target?: string | null;
+            /** Why */
+            why?: string | null;
+        };
+        /** NodeMapping */
+        NodeMapping: {
+            /** Best */
+            best?: ("direct" | "strong" | "partial") | null;
+            /**
+             * Count
+             * @default 0
+             */
+            count: number;
+            /** Reason */
+            reason?: string | null;
+            /** Verdict */
+            verdict?: ("linked" | "none") | null;
+        };
+        /** OutlineImportBrief */
+        OutlineImportBrief: {
+            /** Applied At */
+            applied_at?: string | null;
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            } | null;
+            /**
+             * Course Entity Id
+             * Format: uuid
+             */
+            course_entity_id: string;
+            /** Course Key */
+            course_key?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Curriculum Version Id
+             * Format: uuid
+             */
+            curriculum_version_id: string;
+            /** Document Title */
+            document_title?: string | null;
+            /**
+             * Document Version Id
+             * Format: uuid
+             */
+            document_version_id: string;
+            /** Error */
+            error?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Job Id */
+            job_id?: string | null;
+            /** Options */
+            options: {
+                [key: string]: unknown;
+            };
+            /** Outline Year */
+            outline_year?: string | null;
+            /** Reverted At */
+            reverted_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "ready" | "applied" | "discarded" | "failed" | "reverted";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+        };
+        /** OutlineImportCreated */
+        OutlineImportCreated: {
+            /** Duplicate Document */
+            duplicate_document: boolean;
+            /** Job Id */
+            job_id: string | null;
+            outline_import: components["schemas"]["OutlineImportBrief"];
+            /** Reused */
+            reused: boolean;
+        };
+        /** OutlineImportOut */
+        OutlineImportOut: {
+            /** Applied At */
+            applied_at?: string | null;
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            } | null;
+            /**
+             * Course Entity Id
+             * Format: uuid
+             */
+            course_entity_id: string;
+            /** Course Key */
+            course_key?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Curriculum Version Id
+             * Format: uuid
+             */
+            curriculum_version_id: string;
+            /** Document Title */
+            document_title?: string | null;
+            /**
+             * Document Version Id
+             * Format: uuid
+             */
+            document_version_id: string;
+            /** Error */
+            error?: {
+                [key: string]: unknown;
+            } | null;
+            /** Etag */
+            etag?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Job Id */
+            job_id?: string | null;
+            /** Options */
+            options: {
+                [key: string]: unknown;
+            };
+            /** Outline Year */
+            outline_year?: string | null;
+            plan?: components["schemas"]["OutlinePlan"] | null;
+            result?: components["schemas"]["OutlineResult"] | null;
+            /** Reverted At */
+            reverted_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "ready" | "applied" | "discarded" | "failed" | "reverted";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+        };
+        /** OutlinePlan */
+        OutlinePlan: {
+            /** Agent */
+            agent: {
+                [key: string]: unknown;
+            };
+            /** Course */
+            course: {
+                [key: string]: unknown;
+            };
+            /** Document */
+            document: {
+                [key: string]: unknown;
+            };
+            /** Dropped */
+            dropped: components["schemas"]["PlanDrop"][];
+            edition: components["schemas"]["PlanEdition"];
+            /** Items */
+            items: components["schemas"]["PlanItem"][];
+            /** Missing Before */
+            missing_before: components["schemas"]["MissingPiece"][];
+            /** Notes */
+            notes: string[];
+            /** Program Missing */
+            program_missing: components["schemas"]["MissingPiece"][];
+            /** Sections */
+            sections: components["schemas"]["PlanSection"][];
+            summary: components["schemas"]["PlanSummary"];
+            /** Unfillable */
+            unfillable: components["schemas"]["MissingPiece"][];
+            /** Warnings */
+            warnings: string[];
+        };
+        /** OutlineResult */
+        OutlineResult: {
+            /** Applied */
+            applied: string[];
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Edits */
+            edits: {
+                [key: string]: unknown;
+            };
+            /** Map Estimate Usd */
+            map_estimate_usd?: number | null;
+            /** Map Job Id */
+            map_job_id?: string | null;
+            /** Missing After */
+            missing_after: components["schemas"]["MissingPiece"][];
+            /** New Entities */
+            new_entities: {
+                [key: string]: string;
+            };
+            /** Program After */
+            program_after: components["schemas"]["MissingPiece"][];
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+        };
+        /** OutlineYear */
+        OutlineYear: {
+            /** Academic Year */
+            academic_year?: string | null;
+            /** Publication Date */
+            publication_date?: string | null;
+            /** Quote */
+            quote?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Start Year */
+            start_year?: number | null;
         };
         /** Page */
         Page: {
@@ -1725,6 +2248,222 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** PlanAgent */
+        PlanAgent: {
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decision */
+            decision?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Skip */
+            skip?: string | null;
+        };
+        /** PlanDiff */
+        PlanDiff: {
+            /** After */
+            after?: unknown;
+            /** Before */
+            before?: unknown;
+            /** Field */
+            field: string;
+        };
+        /** PlanDrop */
+        PlanDrop: {
+            /** Reason */
+            reason: string;
+            /** What */
+            what: string;
+        };
+        /** PlanEdition */
+        PlanEdition: {
+            /**
+             * Fit
+             * @enum {string}
+             */
+            fit: "match" | "older" | "later" | "unknown";
+            outline: components["schemas"]["OutlineYear"];
+            version: components["schemas"]["VersionYear"];
+        };
+        /** PlanEnd */
+        PlanEnd: {
+            /** Entity Id */
+            entity_id?: string | null;
+            /** Key */
+            key?: string | null;
+            /** Label */
+            label?: string | null;
+            /** New */
+            new?: boolean | null;
+            /** Number */
+            number?: string | null;
+            /** Ref */
+            ref?: string | null;
+            /** Short */
+            short?: string | null;
+            /** Type */
+            type: string;
+        };
+        /** PlanEvidence */
+        PlanEvidence: {
+            /** Field */
+            field?: string | null;
+            /** Page */
+            page?: number | null;
+            /** Quote */
+            quote?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "outline" | "element";
+            /** Span Id */
+            span_id?: string | null;
+        };
+        /** PlanItem */
+        PlanItem: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "add" | "replace" | "keep" | "retire" | "detach" | "set_field" | "link";
+            agent?: components["schemas"]["PlanAgent"] | null;
+            /** Blocked Reason */
+            blocked_reason?: string | null;
+            /**
+             * Carries Links
+             * @default 0
+             */
+            carries_links: number;
+            /** Default Selected */
+            default_selected: boolean;
+            /**
+             * Depends On
+             * @default []
+             */
+            depends_on: string[];
+            /**
+             * Diff
+             * @default []
+             */
+            diff: components["schemas"]["PlanDiff"][];
+            /**
+             * Drops Links
+             * @default 0
+             */
+            drops_links: number;
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["PlanEvidence"][];
+            /**
+             * Excludes
+             * @default []
+             */
+            excludes: string[];
+            /**
+             * Fills
+             * @default []
+             */
+            fills: string[];
+            /** Id */
+            id: string;
+            /** Key Preview */
+            key_preview?: string | null;
+            link?: components["schemas"]["PlanLink"] | null;
+            /** Noop */
+            noop: boolean;
+            /** Proposed */
+            proposed?: {
+                [key: string]: unknown;
+            } | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Section
+             * @enum {string}
+             */
+            section: "outcomes" | "assessments" | "topics" | "course" | "links";
+            /** Selectable */
+            selectable: boolean;
+            target?: components["schemas"]["PlanEnd"] | null;
+            /** Title */
+            title: string;
+        };
+        /** PlanLink */
+        PlanLink: {
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "stated" | "inferred";
+            /** Level */
+            level?: ("introduce" | "reinforce" | "assess") | null;
+            /** Model Strength */
+            model_strength?: number | null;
+            /** Rationale */
+            rationale?: string | null;
+            /**
+             * Rel Type
+             * @enum {string}
+             */
+            rel_type: "assesses" | "supports" | "contributes_to";
+            source: components["schemas"]["PlanEnd"];
+            /** Strength */
+            strength?: number | null;
+            target: components["schemas"]["PlanEnd"];
+        };
+        /** PlanSection */
+        PlanSection: {
+            /** Compare */
+            compare?: number | null;
+            /** Complete */
+            complete?: boolean | null;
+            /** Existing */
+            existing: number;
+            /** Existing Edition */
+            existing_edition?: string | null;
+            /** Extracted */
+            extracted: number;
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "outcomes" | "assessments" | "topics";
+            /** Label */
+            label: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "present" | "absent";
+        };
+        /** PlanSummary */
+        PlanSummary: {
+            /** Changes */
+            changes: {
+                [key: string]: number;
+            };
+            /** Closes */
+            closes: string[];
+            /** Introduces */
+            introduces: components["schemas"]["MissingPiece"][];
+            /** Missing After */
+            missing_after: number;
+            /** Missing Before */
+            missing_before: number;
+            /** Program After */
+            program_after: number;
+            /** Program Before */
+            program_before: number;
+            /** Program Closes */
+            program_closes: string[];
+            /** Selected */
+            selected: number;
         };
         /** PloThread */
         PloThread: {
@@ -1806,6 +2545,13 @@ export interface components {
              * @enum {string}
              */
             resolution: "abort" | "drop_conflicting";
+        };
+        /** RerunIn */
+        RerunIn: {
+            /** Academic Year */
+            academic_year?: string | null;
+            /** Alias Codes */
+            alias_codes?: string[] | null;
         };
         /** ReviewDecisionIn */
         ReviewDecisionIn: {
@@ -1986,6 +2732,23 @@ export interface components {
             /** Weak Chains */
             weak_chains: number;
         };
+        /** SelectionIn */
+        SelectionIn: {
+            /**
+             * Edits
+             * @default {}
+             */
+            edits: {
+                [key: string]: components["schemas"]["LinkEdit"];
+            };
+            /**
+             * Map After
+             * @default false
+             */
+            map_after: boolean;
+            /** Selected Item Ids */
+            selected_item_ids: string[];
+        };
         /** SourceAssign */
         SourceAssign: {
             /** Applicability */
@@ -2065,6 +2828,10 @@ export interface components {
              * @default false
              */
             is_synthetic: boolean;
+            /** Mime Type */
+            mime_type?: string | null;
+            /** Page Count */
+            page_count?: number | null;
             /** Page Number */
             page_number: number;
             /** Publication Date */
@@ -2171,6 +2938,15 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** VersionYear */
+        VersionYear: {
+            /** Academic Year */
+            academic_year?: string | null;
+            /** Label */
+            label?: string | null;
+            /** Start Year */
+            start_year?: number | null;
+        };
         /** WebColumn */
         WebColumn: {
             /** Band */
@@ -2198,6 +2974,8 @@ export interface components {
              * @enum {string}
              */
             category: "vertical" | "horizontal" | "containment" | "overlap";
+            /** Connection */
+            connection?: ("direct" | "strong" | "partial") | null;
             /**
              * Contradicted
              * @default false
@@ -2294,6 +3072,10 @@ export interface components {
             is_synthetic: boolean;
             /** Key */
             key: string;
+            /** Mapping */
+            mapping?: {
+                [key: string]: components["schemas"]["NodeMapping"];
+            } | null;
             /**
              * Metrics
              * @default {}
@@ -3321,7 +4103,9 @@ export interface operations {
     list_jobs_api_v1_jobs_get: {
         parameters: {
             query?: {
-                status?: string | null;
+                status?: components["schemas"]["JobStatus"][];
+                kind?: string[];
+                mine?: boolean;
                 limit?: number;
             };
             header?: {
@@ -3615,6 +4399,225 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_outline_import_api_v1_outline_imports__import_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutlineImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_outline_import_api_v1_outline_imports__import_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutlineImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_outline_import_api_v1_outline_imports__import_id__discard_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutlineImportBrief"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_outline_import_api_v1_outline_imports__import_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerun_outline_import_api_v1_outline_imports__import_id__rerun_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RerunIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revert_outline_import_api_v1_outline_imports__import_id__revert_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutlineImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -4813,6 +5816,83 @@ export interface operations {
             };
         };
     };
+    ai_map_api_v1_versions__version_id__ai_map_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MapRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_map_preview_api_v1_versions__version_id__ai_map_preview_get: {
+        parameters: {
+            query?: {
+                course_id?: string[];
+                forward?: boolean;
+            };
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ai_mappings_api_v1_versions__version_id__ai_mappings_post: {
         parameters: {
             query?: never;
@@ -4870,6 +5950,115 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_course_missing_api_v1_versions__version_id__courses__course_id__missing_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                version_id: string;
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseMissingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_outline_imports_api_v1_versions__version_id__courses__course_id__outline_imports_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                version_id: string;
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutlineImportBrief"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_outline_import_api_v1_versions__version_id__courses__course_id__outline_imports_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-cfs-user"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                version_id: string;
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_create_outline_import_api_v1_versions__version_id__courses__course_id__outline_imports_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutlineImportCreated"];
                 };
             };
             /** @description Validation Error */

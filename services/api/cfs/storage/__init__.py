@@ -13,6 +13,10 @@ def get_store() -> ObjectStore:
         if not s.s3_bucket:
             raise RuntimeError("CFS_S3_BUCKET is required when CFS_STORAGE_BACKEND=s3")
         return S3Store(s.s3_bucket, s.s3_region)
+    if s.storage_backend == "db":
+        from cfs.storage.db import DbStore
+
+        return DbStore()
     from cfs.storage.local import LocalFSStore
 
     return LocalFSStore(s.storage_root)

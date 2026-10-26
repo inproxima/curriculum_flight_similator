@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import Any
 
 from cfs.analysis import alignment as al
-from cfs.graph.queries import owner_courses
+from cfs.graph.queries import later_courses, owner_courses, teaches
 from cfs.graph.snapshot import Snapshot, time_index
 from cfs.graph.view import evidence_completeness
 
@@ -92,6 +92,60 @@ def _focus_set(snap: Snapshot, rels: dict[str, dict], focus: str, active) -> set
     return {n for n in keep if n in snap.entities or n in rels}
 
 
+MAPPED_KINDS = {
+    "course_outcome": ("contributes_to", "prepares_for", "prepared_by"),
+    "assessment": ("assesses",),
+    "topic": ("supports", "prepares_for", "prepared_by"),
+}
+
+
+def course_horizon(snap: Snapshot) -> dict[str, tuple[bool, bool]]:
+    """Per course: (an earlier course teaches something, a later course teaches something)."""
+    later = {c["id"]: later_courses(snap, c["id"]) for c in snap.courses()}
+    content = {c for c in later if teaches(snap, c)}
+    has_earlier = {t for c, ls in later.items() if c in content for t in ls}
+    return {c: (c in has_earlier, any(t in content for t in ls)) for c, ls in later.items()}
+
+
+def _mapping(
+    snap: Snapshot,
+    n: str,
+    etype: str,
+    idx: dict[str, Any],
+    verdicts: dict[tuple[str, str], dict],
+    active,
+    horizon: dict[str, tuple[bool, bool]],
+) -> dict[str, Any] | None:
+    """For each link type an element is examined for: its best connection level, and the AI's verdict if any.
+    `prepared_by` / `prepares_for` are left out when no owning course has an earlier / a later course."""
+    kinds = MAPPED_KINDS.get(etype)
+    if not kinds:
+        return None
+    owners = set(owner_courses(snap, n))
+    out = {}
+    for kind in kinds:
+        if kind == "prepared_by":  # incoming: an earlier course's element prepares for this one
+            rels = [
+                r
+                for r in snap.rels("prepares_for", target=n)
+                if r["source"] in snap.entities and set(owner_courses(snap, r["source"])) - owners
+            ]
+        else:
+            rels = snap.rels(kind, source=n)
+        levels = [lv for r in rels if active(r) and (lv := al.connection_level(r, idx["edges"].get(r["key"])))]
+        v = verdicts.get((n, kind)) or {}
+        side = {"prepared_by": 0, "prepares_for": 1}.get(kind)
+        if side is not None and not levels and not v and not any(horizon.get(c, (False, False))[side] for c in owners):
+            continue  # nothing earlier / later to connect to
+        out[kind] = {
+            "best": min(levels, key=al.CONNECTION_LEVELS.index) if levels else None,
+            "count": len(levels),
+            "verdict": v.get("verdict"),
+            "reason": v.get("reason"),
+        }
+    return out
+
+
 def build_web(
     snap: Snapshot,
     *,
@@ -101,9 +155,13 @@ def build_web(
     include_rejected: bool = False,
     diff: dict[str, Any] | None = None,
     base: Snapshot | None = None,
+    verdicts: dict[tuple[str, str], dict] | None = None,
 ) -> dict[str, Any]:
     idx = al.alignment_index(snap, pathway)
     base_idx = al.alignment_index(base, pathway) if base is not None else None
+    horizon = course_horizon(snap)
+    if base is not None:
+        horizon = {**course_horizon(base), **horizon}
 
     entities = {k: v for k, v in snap.entities.items() if v["type"] in WEB_TYPES}
     rels = dict(snap.relationships)
@@ -178,6 +236,9 @@ def build_web(
             "metrics": metrics,
             "metrics_before": (base_idx["nodes"].get(n) if base_idx else None),
             "aggregate": None,
+            "mapping": _mapping(
+                snap if n in snap.entities else base, n, e["type"], idx, verdicts or {}, active, horizon
+            ),
         }
         if e["type"] == "course":
             members: dict[str, int] = {"course_outcome": 0, "assessment": 0, "topic": 0}
@@ -212,6 +273,7 @@ def build_web(
                 "basis": r["basis"],
                 "review_state": r["review_state"],
                 "provenance": al.provenance(r),
+                "connection": al.connection_level(r, st),
                 "strength": st,
                 "strength_before": before["effective"] if before else None,
                 "rationale": r.get("rationale"),

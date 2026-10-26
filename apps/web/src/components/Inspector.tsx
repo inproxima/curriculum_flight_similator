@@ -4,8 +4,20 @@ import { useEntity } from "../api/hooks";
 import { useLinkDecisions, type CoursePair, type PloThread, type WebEdge, type WebNode, type WebView } from "../api/webHooks";
 import { useUi } from "../store/ui";
 import { gapShort } from "../web/webNodes";
-import { PROVENANCE_TEXT, STATUS_GLYPH, STATUS_TEXT, STRENGTH_TEXT, THREAD_TEXT } from "../web/webStyle";
+import {
+  CONNECTION_COLOR,
+  CONNECTION_GLYPH,
+  CONNECTION_HELP,
+  CONNECTION_TEXT,
+  PROVENANCE_TEXT,
+  STATUS_GLYPH,
+  STATUS_TEXT,
+  STRENGTH_TEXT,
+  THREAD_TEXT,
+  type ConnectionLevel,
+} from "../web/webStyle";
 import { FieldEvidence } from "./Evidence";
+import { MissingPiecesCard } from "./outline/MissingPiecesCard";
 import { QuickEdit } from "./QuickEdit";
 
 const REL_TEXT: Record<string, string> = {
@@ -53,6 +65,67 @@ export function Strength({ label, score }: { label?: string | null; score?: numb
   );
 }
 
+/** Connection level: colour plus dots plus words (never colour alone). */
+export function Conn({ level, short }: { level?: ConnectionLevel | null; short?: boolean }) {
+  if (!level) return null;
+  const c = CONNECTION_COLOR[level];
+  return (
+    <span className="map-chip" style={{ color: c, borderColor: c }} title={`${CONNECTION_TEXT[level]}: ${CONNECTION_HELP[level]}`}>
+      {CONNECTION_GLYPH[level]}{short ? "" : ` ${CONNECTION_TEXT[level]}`}
+    </span>
+  );
+}
+
+type MapKind = "contributes_to" | "assesses" | "supports" | "prepared_by" | "prepares_for";
+const MAP_ROWS: Record<string, { kind: MapKind; label: string; none: string }[]> = {
+  course_outcome: [
+    { kind: "contributes_to", label: "Program outcomes", none: "No program outcome found" },
+    { kind: "prepared_by", label: "Builds on (earlier courses)", none: "Nothing earlier found" },
+    { kind: "prepares_for", label: "Prepares for (later courses)", none: "Nothing later found" },
+  ],
+  assessment: [{ kind: "assesses", label: "Course outcomes tested", none: "No course outcome found" }],
+  topic: [
+    { kind: "supports", label: "Course outcomes supported", none: "No course outcome found" },
+    { kind: "prepared_by", label: "Builds on (earlier courses)", none: "Nothing earlier found" },
+    { kind: "prepares_for", label: "Prepares for (later courses)", none: "Nothing later found" },
+  ],
+};
+
+/** One mapped direction of an element: its best level, the AI's "none found" verdict with the reason, or not yet
+ *  examined. */
+function MapCell({ n, kind, none = "none found" }: { n: WebNode; kind: MapKind; none?: string }) {
+  const m = n.mapping?.[kind];
+  if (!m) return <span className="muted">—</span>;
+  if (m.best) return <><Conn level={m.best} /> <span className="muted">{m.count} link{m.count === 1 ? "" : "s"}</span></>;
+  if (m.verdict === "none")
+    return (
+      <span>
+        <span className="map-chip none">✗ {none}</span> <span className="muted">{m.reason}</span>
+      </span>
+    );
+  return <span className="map-chip unmapped" title="Not examined by the AI mapping yet (Layers → Map connections)">? not mapped</span>;
+}
+
+function ConnectionSummary({ n }: { n: WebNode }) {
+  const rows = MAP_ROWS[n.type];
+  if (!rows || !n.mapping) return null;
+  return (
+    <>
+      <h4 style={{ marginTop: 10 }}>Connection map</h4>
+      <table className="data small conn-map">
+        <tbody>
+          {rows.filter((r) => n.mapping?.[r.kind]).map((r) => (
+            <tr key={r.kind}>
+              <th>{r.label}</th>
+              <td><MapCell n={n} kind={r.kind} none={r.none} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
 function Prov({ p }: { p: string }) {
   const cls = p === "documented" ? "documented" : p === "proposed" ? "proposed" : "inferred";
   return <span className={`badge ${cls}`} title={PROVENANCE_TEXT[p]}>{p === "accepted_inference" ? "accepted inference" : p}</span>;
@@ -82,6 +155,7 @@ function EdgeRow({ e, ctx, from }: { e: WebEdge; ctx: Ctx; from: string }) {
     <li>
       <span className="muted small">{dir}</span>
       <NodeLink id={other} ctx={ctx} full />{" "}
+      <Conn level={e.connection} short />{" "}
       {e.level && <span className="badge">{LEVEL_TEXT[e.level]}</span>}
       <Strength label={e.strength?.label} score={e.strength?.effective} /> <Prov p={e.provenance} /> <Status s={e.status} />{" "}
       <button className="link small" onClick={() => select({ kind: "edge", id: e.id, key: e.key })}>why?</button>
@@ -176,7 +250,7 @@ function PairList({ pairs, ctx, dir }: { pairs: CoursePair[]; ctx: Ctx; dir: "in
                 return (
                   <li key={k}>
                     <NodeLink id={e.source} ctx={ctx} /> → <NodeLink id={e.target} ctx={ctx} />{" "}
-                    <Strength label={e.strength?.label} score={e.strength?.effective} /> <Prov p={e.provenance} />{" "}
+                    <Conn level={e.connection} short /> <Strength label={e.strength?.label} score={e.strength?.effective} /> <Prov p={e.provenance} />{" "}
                     <button className="link small" onClick={() => select({ kind: "edge", id: e.id, key: e.key })}>why?</button>
                   </li>
                 );
@@ -188,6 +262,43 @@ function PairList({ pairs, ctx, dir }: { pairs: CoursePair[]; ctx: Ctx; dir: "in
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Each topic and outcome of a course: what it builds on in earlier (prerequisite) courses and what builds on it
+ *  later, with the connection level of each link, or the AI's "none found". */
+function AcrossCourses({ items, ctx }: { items: WebNode[]; ctx: Ctx }) {
+  if (!items.length) return null;
+  const owner = (id: string) => ctx.byId.get(ctx.byId.get(id)?.course_ids?.[0] ?? ctx.byId.get(id)?.course_id ?? "")?.key;
+  const cell = (n: WebNode, kind: "prepared_by" | "prepares_for") => {
+    const es = (kind === "prepared_by" ? ctx.inc.get(n.id) : ctx.out.get(n.id))?.filter((e) => e.type === "prepares_for") ?? [];
+    if (es.length)
+      return es.map((e) => {
+        const other = kind === "prepared_by" ? e.source : e.target;
+        return (
+          <div key={e.id}>
+            <Conn level={e.connection} short /> <NodeLink id={other} ctx={ctx} /> <span className="muted">{owner(other)}</span>
+          </div>
+        );
+      });
+    return <MapCell n={n} kind={kind} none={kind === "prepared_by" ? "nothing earlier" : "nothing later"} />;
+  };
+  return (
+    <>
+      <h4 style={{ marginTop: 10 }}>Topics and outcomes across courses</h4>
+      <table className="data small">
+        <thead><tr><th>Element</th><th>← builds on</th><th>prepares for →</th></tr></thead>
+        <tbody>
+          {items.map((n) => (
+            <tr key={n.id}>
+              <td><NodeLink id={n.id} ctx={ctx} /> <span className="muted">{n.type === "topic" ? "topic" : ""}</span></td>
+              <td>{cell(n, "prepared_by")}</td>
+              <td>{cell(n, "prepares_for")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
 
@@ -208,6 +319,7 @@ function CourseInspector({ n, ctx }: { n: WebNode; ctx: Ctx }) {
         <Status s={n.status} />
       </div>
       {n.description && <p className="muted small">{n.description}</p>}
+      <MissingPiecesCard course={n} view={ctx.view} />
       <Tabs.Root defaultValue="vertical" className="tabs">
         <Tabs.List aria-label="Course alignment views">
           <Tabs.Trigger value="vertical">Outcomes ↕ program</Tabs.Trigger>
@@ -222,7 +334,12 @@ function CourseInspector({ n, ctx }: { n: WebNode; ctx: Ctx }) {
               <ul className="list">
                 {alignmentEdges(ctx, c.id, ["contributes_to", "assesses", "supports"]).map((e) => <EdgeRow key={e.id} e={e} ctx={ctx} from={c.id} />)}
               </ul>
-              {!alignmentEdges(ctx, c.id, ["contributes_to"]).length && <div className="error small">⚠ Not linked to any program outcome.</div>}
+              {!alignmentEdges(ctx, c.id, ["contributes_to"]).length &&
+                (c.mapping?.contributes_to?.verdict === "none" ? (
+                  <div className="small"><span className="map-chip none">✗ no program outcome</span> <span className="muted">The AI found none: {c.mapping.contributes_to.reason}</span></div>
+                ) : (
+                  <div className="error small">⚠ Not linked to any program outcome{c.mapping ? " (not mapped by the AI yet)" : ""}.</div>
+                ))}
             </div>
           ))}
           {topics.length > 0 && (
@@ -233,7 +350,14 @@ function CourseInspector({ n, ctx }: { n: WebNode; ctx: Ctx }) {
                   const sup = (ctx.out.get(t.id) ?? []).filter((e) => e.type === "supports");
                   return (
                     <li key={t.id}>
-                      <NodeLink id={t.id} ctx={ctx} full /> {sup.length ? `→ supports ${sup.map((e) => ctx.byId.get(e.target)?.key).join(", ")}` : <span className="error">supports no outcome</span>}
+                      <NodeLink id={t.id} ctx={ctx} full />{" "}
+                      {sup.length ? (
+                        <>→ supports {sup.map((e) => <span key={e.id}><NodeLink id={e.target} ctx={ctx} /> <Conn level={e.connection} short /> </span>)}</>
+                      ) : t.mapping?.supports?.verdict === "none" ? (
+                        <span><span className="map-chip none">✗ supports no outcome</span> <span className="muted">{t.mapping.supports.reason}</span></span>
+                      ) : (
+                        <span className="error">supports no outcome</span>
+                      )}
                     </li>
                   );
                 })}
@@ -259,8 +383,10 @@ function CourseInspector({ n, ctx }: { n: WebNode; ctx: Ctx }) {
                       <td>{d.documented_hours ?? "—"}</td>
                       <td>
                         {as.length ? as.map((e) => (
-                          <div key={e.id}>{e.type === "prepares_for" ? "prepares " : ""}<NodeLink id={e.target} ctx={ctx} /> <Strength label={e.strength?.label} /></div>
-                        )) : <span className="error">nothing</span>}
+                          <div key={e.id}>{e.type === "prepares_for" ? "prepares " : ""}<NodeLink id={e.target} ctx={ctx} /> <Conn level={e.connection} short /> <Strength label={e.strength?.label} /></div>
+                        )) : a.mapping?.assesses?.verdict === "none" ? (
+                          <span title={a.mapping.assesses.reason ?? undefined}><span className="map-chip none">✗ none found</span> <span className="muted">{a.mapping.assesses.reason}</span></span>
+                        ) : <span className="error">nothing</span>}
                       </td>
                     </tr>
                   );
@@ -274,6 +400,7 @@ function CourseInspector({ n, ctx }: { n: WebNode; ctx: Ctx }) {
           <PairList pairs={incoming} ctx={ctx} dir="in" />
           <h4 style={{ marginTop: 10 }}>Prepares for (later courses)</h4>
           <PairList pairs={outgoing} ctx={ctx} dir="out" />
+          <AcrossCourses items={[...topics, ...clos]} ctx={ctx} />
         </Tabs.Content>
       </Tabs.Root>
       <QuickEdit key={`${n.id}:${ctx.view.scenario?.revision ?? "base"}`} node={n} view={ctx.view} />
@@ -303,7 +430,8 @@ function ElementInspector({ n, ctx }: { n: WebNode; ctx: Ctx }) {
   const typeText = { course_outcome: "Course learning outcome", assessment: "Assessment", topic: "Topic" }[n.type as string] ?? n.type;
   const edges = alignmentEdges(ctx, n.id, ["contributes_to", "assesses", "supports", "prepares_for"]);
   const up = edges.filter((e) => e.type !== "prepares_for");
-  const across = edges.filter((e) => e.type === "prepares_for");
+  const before = edges.filter((e) => e.type === "prepares_for" && e.target === n.id);
+  const after = edges.filter((e) => e.type === "prepares_for" && e.source === n.id);
   const gaps = ctx.view.gaps.filter((g) => !g.source && g.entity_ids.includes(n.id));
   const m = n.metrics as { label?: string; score?: number };
   return (
@@ -326,10 +454,17 @@ function ElementInspector({ n, ctx }: { n: WebNode; ctx: Ctx }) {
           </tbody>
         </table>
       )}
+      <ConnectionSummary n={n} />
       <h4 style={{ marginTop: 10 }}>Vertical alignment</h4>
       {up.length ? <ul className="list">{up.map((e) => <EdgeRow key={e.id} e={e} ctx={ctx} from={n.id} />)}</ul> : <p className="muted small">No vertical links.</p>}
-      <h4 style={{ marginTop: 10 }}>Horizontal alignment</h4>
-      {across.length ? <ul className="list">{across.map((e) => <EdgeRow key={e.id} e={e} ctx={ctx} from={n.id} />)}</ul> : <p className="muted small">No links to earlier or later courses.</p>}
+      {n.type !== "assessment" || after.length ? (
+        <>
+          <h4 style={{ marginTop: 10 }}>Builds on (earlier and prerequisite courses)</h4>
+          {before.length ? <ul className="list">{before.map((e) => <EdgeRow key={e.id} e={e} ctx={ctx} from={n.id} />)}</ul> : <p className="muted small">No links from earlier courses.</p>}
+          <h4 style={{ marginTop: 10 }}>Prepares for (later courses)</h4>
+          {after.length ? <ul className="list">{after.map((e) => <EdgeRow key={e.id} e={e} ctx={ctx} from={n.id} />)}</ul> : <p className="muted small">No links to later courses.</p>}
+        </>
+      ) : null}
       <QuickEdit key={`${n.id}:${ctx.view.scenario?.revision ?? "base"}`} node={n} view={ctx.view} />
       <EvidenceBlock id={n.id} />
     </div>
@@ -352,6 +487,7 @@ function EdgeInspector({ e, ctx }: { e: WebEdge; ctx: Ctx }) {
       <div className="muted small">{e.category} link</div>
       <h2><NodeLink id={e.source} ctx={ctx} /> {REL_TEXT[e.type] ?? e.type} <NodeLink id={e.target} ctx={ctx} /></h2>
       <div className="row wrap">
+        <Conn level={e.connection} />
         {st && <Strength label={st.label} score={st.effective} />}
         <Prov p={e.provenance} />
         {e.level && <span className="badge">{LEVEL_TEXT[e.level]}</span>}
@@ -360,6 +496,12 @@ function EdgeInspector({ e, ctx }: { e: WebEdge; ctx: Ctx }) {
           <span className="badge">was {e.strength_before.toFixed(2)}</span>
         )}
       </div>
+      {e.connection && (
+        <p className="muted small">
+          {CONNECTION_TEXT[e.connection]} connection: {CONNECTION_HELP[e.connection]}
+          {e.provenance === "proposed" ? " Surmised by the AI; review it below." : ""}
+        </p>
+      )}
       {e.rationale && <p className="quote">{e.rationale}</p>}
       {st?.components && (
         <>

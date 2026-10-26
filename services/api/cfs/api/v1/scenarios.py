@@ -194,6 +194,8 @@ def scenario_web(
     against the baseline and the baseline scorecard for before/after comparison."""
     s = _get(db, p, sid)
     base, proj, results, d = service.projection(db, s)
+    from cfs.ai.mapping import load_verdicts
+
     view = build_web(
         proj,
         detail=detail,
@@ -201,6 +203,7 @@ def scenario_web(
         pathway=pathway,
         diff=d if compare else None,
         base=base if compare else None,
+        verdicts=load_verdicts(db, s.base_version_id),
     )
     view["scenario"] = {"id": str(s.id), "title": s.title, "revision": s.revision}
     view["change_errors"] = [r for r in results if not r["ok"]]
