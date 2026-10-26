@@ -26,18 +26,15 @@ Pushing to the deployed branch redeploys automatically.
 The image already sets `CFS_JOB_RUNNER=thread`, `CFS_STORAGE_BACKEND=db` and `CFS_WEB_DIST_DIR`.
 
 ## Copying a local workspace to Render
-The data never goes through Git.
+The data never goes through Git. With the local database running:
 
-1. Dump the local database: `docker exec curriculum-flight-simulator-db-1 pg_dump -U cfs -Fc cfs > cfs.dump`
-2. Restore it into the Render database, using its **external** URL:
-   `pg_restore --no-owner --no-privileges -d "<external URL>" cfs.dump` (PostgreSQL 16 client tools).
-3. Bring it to the current schema and copy the original files into it:
-   ```bash
-   cd services/api
-   CFS_DATABASE_URL="<external URL>" uv run alembic upgrade head
-   CFS_DATABASE_URL="<external URL>" uv run python ../../scripts/copy_objects_to_db.py ../../data/objects
-   ```
-   The copy script skips files that are already there and lists any that are missing locally.
+1. In the Render dashboard, open the database. Under **Networking**, add this computer's IP to the inbound rules.
+2. Copy its **External Database URL**.
+3. Run `scripts/load_into_render.sh` from the repository root. It reads the URL from the clipboard, dumps the
+   local database, restores it, migrates it to the current schema, copies the original files from
+   `data/objects` into it ([`scripts/copy_objects_to_db.py`](../scripts/copy_objects_to_db.py)), and compares row
+   counts. It refuses to touch a database that already has tables.
+4. Copy the database's **Internal Database URL** into the web service's `CFS_DATABASE_URL`.
 
 ## Things to know
 - **Anyone with the link can change or delete anything**, including running AI jobs on the configured keys. The
