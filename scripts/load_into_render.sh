@@ -29,6 +29,14 @@ if [ -z "$URL" ]; then
   fi
 fi
 case "$URL" in postgres://*|postgresql://*) ;; *) echo "That is not a postgres:// URL."; exit 1 ;; esac
+# A Render Internal Database URL has a bare host (dpg-…-a) that only resolves inside Render. The External URL is
+# the same with the region's domain added.
+HOSTPART="${URL##*@}"; HOSTPART="${HOSTPART%%/*}"; HOSTONLY="${HOSTPART%%:*}"
+if [[ "$HOSTONLY" == dpg-* && "$HOSTONLY" != *.* ]]; then
+  EXT="$HOSTONLY.${CFS_RENDER_REGION:-oregon}-postgres.render.com"
+  URL="${URL/@$HOSTONLY/@$EXT}"
+  echo "That is the Internal URL; using the external host $EXT instead."
+fi
 TARGET="${URL##*@}"; echo "Target: ${TARGET%%\?*}"   # host/db only; the password is never printed
 
 if ! TABLES=$("$PG16/psql" "$URL" -Atqc "select count(*) from pg_tables where schemaname = 'public'" 2>&1); then
@@ -37,9 +45,10 @@ if ! TABLES=$("$PG16/psql" "$URL" -Atqc "select count(*) from pg_tables where sc
   exit 1
 fi
 if [ "$TABLES" != "0" ]; then
-  # The hosted app migrates an empty database on its first start. Only that empty schema may be replaced.
-  ROWS=$("$PG16/psql" "$URL" -Atqc \
-    "select (select count(*) from organizations) + (select count(*) from stored_objects)" 2>/dev/null || echo "?")
+  # The hosted app migrates an empty database on its first start (and creates the shared workspace and user on
+  # the first visit). Only a schema with no programs, documents or files may be replaced.
+  ROWS=$("$PG16/psql" "$URL" -Atqc "select (select count(*) from programs) + (select count(*) from documents)
+    + (select count(*) from stored_objects)" 2>/dev/null || echo "?")
   if [ "$ROWS" = "0" ]; then
     echo "The target holds only the empty schema the app created on its first start. Replacing it."
     "$PG16/psql" "$URL" -qc "drop schema public cascade; create schema public;"
