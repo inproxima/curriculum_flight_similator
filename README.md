@@ -20,7 +20,8 @@ Status: all six phases are implemented and tested locally:
 5. AI assistance
 6. Security, accessibility, CI, and AWS infrastructure definitions
 
-A public prototype (no sign-in) is hosted on Render; see [docs/hosting-render.md](docs/hosting-render.md).
+A public prototype (no sign-in) is hosted on Render at https://curriculum-flight-simulator.onrender.com; see
+[docs/hosting-render.md](docs/hosting-render.md).
 
 The AWS infrastructure is validated but has **not been applied**; nothing runs in AWS yet. See
 [docs/implementation-report.md](docs/implementation-report.md), [docs/deployment.md](docs/deployment.md),

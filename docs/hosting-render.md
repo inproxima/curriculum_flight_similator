@@ -4,6 +4,9 @@ The prototype is hosted on [Render](https://render.com) so that anyone with the 
 no sign-in. This is separate from the AWS design in [deployment.md](deployment.md), which has sign-in and has
 never been applied.
 
+**Live:** https://curriculum-flight-simulator.onrender.com (web service `curriculum-flight-simulator`, database
+`curriculum-flight-simulator-db`, Oregon). It deploys branch `v2-alignment-web`.
+
 ## What runs
 | Piece | Render resource | Notes |
 |---|---|---|
